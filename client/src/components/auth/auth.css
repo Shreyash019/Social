@@ -1,0 +1,104 @@
+.auth-container{
+    width: 70%;
+    height: auto;
+    overflow: auto;
+    margin: 4% 15% 5%;
+    border-radius: 10px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.auth-left{
+    width: 60%;
+    height: 30vw;
+    float: left;
+    background-image: url("../img/sbg.jpg");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+.auth-left h1{
+    text-align: center;
+    color: white;
+}
+
+.auth-right{
+    width: 40%;
+    float: right;
+    margin: 0% 0% 2%;
+    text-align: center;
+}
+.auth-right h2{
+    margin: 5% 0% 5%;
+}
+
+.auth-right p{
+    font-size: 0.7em;
+    margin: 3% 0%;
+}
+
+
+@media screen and (max-width: 600px)  {
+    .auth-left{
+        width: 100%;
+        height: 200px;
+    }
+    .auth-right{
+        width: 100%;
+    }
+    .auth-left h1{
+        margin: 50px 0%;
+        font-size: 4vw;
+    }
+}
+
+@media screen and (min-width: 601px)  {
+    .auth-left{
+        width: 100%;
+        height: 300px;
+    }
+    .auth-right{
+        width: 100%;
+    }
+    .auth-left h1{
+        margin: 80px 0%;
+        font-size: 1.5em;
+    }
+}
+
+@media screen and (min-width: 750px)  {
+    .auth-left{
+        width: 50%;
+        height: 43vw;
+    }
+    .auth-right{
+        width: 50%;
+    }
+    .auth-left h1{
+        margin: 90px 0%;
+        font-size: 2vw;
+    }
+}
+
+@media screen and (min-width: 900px)  {
+    .auth-left{
+        width: 50%;
+        height: 38vw;
+    }
+    .auth-right{
+        width: 50%;
+    }
+    .auth-left h1{
+        margin: 25% 0%;
+        font-size: 2vw;
+    }
+}
+
+@media screen and (min-width: 1200px)  {
+    .auth-left{
+        width: 50%;
+        height: 32vw;
+    }
+    .auth-right{
+        width: 50%;
+    }
+}

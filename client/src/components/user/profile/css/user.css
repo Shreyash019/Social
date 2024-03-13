@@ -1,0 +1,238 @@
+.user-container{
+    width: 70%;
+    height: auto;
+    overflow: auto;
+    margin: 2% 15%;
+    border-radius: 20px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 2px 4px;
+}
+.user-left{
+    width: 50%;
+    height: auto;
+    float:left;
+}
+.user-left hr{
+    width: 40%;
+    height:3px;
+    background-color: red;
+    margin: 2% 30% 0%;
+    border: none;
+    border-radius: 2px;
+}
+.user-left-top{
+    width:100%;
+    height:50%;
+    text-align: center;
+}
+.user-left-top img{
+    width: 200px;
+    height:220px;
+    margin: 10% 27% 2%;
+    border-radius: 20%;
+}
+.user-left-top span{
+    padding: 0% 4%;
+    font-size: 1.2em;
+}
+.user-left-bottom{
+    width:100%;
+    height:50%;
+    margin: 2% 0% 15% 0%;
+    text-align: center;
+}
+.user-left-bottom span{
+    padding: 0% 4%;
+    font-size: 2em;
+}
+
+.user-right{
+    width:50%;
+    float: left;
+}
+.user-details{
+    width: 100%;
+    height: auto;
+    margin: 10% 0%;
+}
+.user-details hr{
+    width: 15%;
+    height: 4px;
+    margin: 2% 0%;
+    background-color: red;
+    border: none;
+    border-radius: 2px;
+}
+
+.user-details p{
+    width:70%;
+    margin: 4% 0%;
+    padding: 0% 2%;
+    border-radius: 2px;
+    border: 0.5px solid rgba(27, 2, 254, 0.653);
+    border-top: 0;
+    border-right: 0;
+    font-size: 1vw;
+}
+.user-details b{
+    color: rgb(16, 6, 124);
+    font-size: 1.2vw;
+}
+
+
+@media screen and (max-width:750px) {
+    .user-left{
+        width: 100%;
+    }
+    .user-left-top img{
+        width: 220px;
+        height:250px;
+        margin: 10% 22% 2%;
+    }
+    .user-left-bottom{
+        margin: 2% 0% 0% 0%;
+    }
+    .user-right{
+        width:100%;
+        margin: 0% 0%;
+        overflow: auto;
+        text-align: center;
+    }
+
+    .user-details hr{
+        width: 10%;
+        margin: 2% 45%;
+    }
+    
+    .user-details p{
+        width:50%;
+        margin: 4% 25%;
+        padding: 0% 2%;
+        font-size: 1.2vw;
+    }
+    .user-details b{
+        color: rgb(16, 6, 124);
+        font-size: 1.5vw;
+    }
+    .user-details{
+        margin: 5% 0% 10%;
+    }
+    .user-details h1{
+        text-align:center;
+    }
+}
+
+@media screen and (min-width:751px) {
+    .user-left{
+        width: 100%;
+    }
+    .user-left-top img{
+        width: 220px;
+        height:250px;
+        margin: 10% 22% 2%;
+    }
+    .user-left-bottom{
+        margin: 2% 0% 0% 0%;
+    }
+    .user-right{
+        width:100%;
+        margin: 0% 0%;
+        overflow: auto;
+        text-align: center;
+    }
+
+    .user-details hr{
+        width: 10%;
+        margin: 2% 45%;
+    }
+    
+    .user-details p{
+        width:50%;
+        margin: 4% 25%;
+        padding: 0% 2%;
+        font-size: 1.2vw;
+    }
+    .user-details b{
+        color: rgb(16, 6, 124);
+        font-size: 1.5vw;
+    }
+    .user-details{
+        margin: 5% 0% 10%;
+    }
+    .user-details h1{
+        text-align:center;
+    }
+}
+
+@media screen and (min-width:900px) {
+    .user-left{
+        width: 50%;
+    }
+    .user-left-top{
+        width:100%;
+        height:50%;
+        text-align: center;
+    }
+    .user-left-top img{
+        width: 180px;
+        height:200px;
+        margin: 10% 27% 2%;
+        border-radius: 20%;
+    }
+    .user-left-top span{
+        padding: 0% 4%;
+        font-size: 1.2em;
+    }
+    .user-left-bottom{
+        width:100%;
+        height:50%;
+        margin: 2% 0% 15% 0%;
+        text-align: center;
+    }
+    .user-left-bottom span{
+        padding: 0% 4%;
+        font-size: 2em;
+    }
+    
+    .user-right{
+        width:50%;
+        float: left;
+    }
+    .user-details{
+        width: 100%;
+        height: auto;
+        margin: 10% 0%;
+    }
+    .user-details hr{
+        width: 15%;
+        height: 4px;
+        margin: 2% 0%;
+        background-color: red;
+        border: none;
+        border-radius: 2px;
+    }
+    
+    .user-details p{
+        width:70%;
+        margin: 4% 0%;
+        padding: 0% 2%;
+        border-radius: 2px;
+        border: 0.5px solid rgba(27, 2, 254, 0.653);
+        border-top: 0;
+        border-right: 0;
+        font-size: 1vw;
+    }
+    .user-details b{
+        color: rgb(16, 6, 124);
+        font-size: 1.2vw;
+    }
+}
+
+@media screen and (min-width:900px) {
+ser-left-top img{
+        width: 180px;
+        height:200px;
+        margin: 10% 27% 2%;
+        border-radius: 20%;
+    }
+
+}

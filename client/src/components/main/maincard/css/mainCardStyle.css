@@ -1,0 +1,110 @@
+.main-box-container{
+    width: 100%;
+}
+
+.main-box-left{
+    width: 25%;
+    float: left;
+}
+
+.main-box-mid{
+    width: 50%;
+    float: left;
+}
+
+.main-box-right{
+    width: 25%;
+    float: left;
+}
+
+@media screen and (max-width:750px) {
+    .main-box-container{
+        width: 100%;
+        display: inline;
+    }
+    .main-box-left{
+        width: 70%;
+        margin: 10% 15%;
+    }
+    
+    .main-box-mid{
+        width: 90%;
+        margin: -10% 5% 5%;
+    }
+
+}
+
+@media screen and (min-width:751px) {
+    .main-box-container{
+        width: 100%;
+        display: flex;
+    }
+    
+    .main-box-left{
+        width: 25%;
+        float: left;
+        margin:2% 0% 5% 2%;
+    }
+    
+    .main-box-mid{
+        width: 50%;
+        float: left;
+        margin:2% 0% 5%;
+    }
+    
+    .main-box-right{
+        width: 25%;
+        float: left;
+        margin:2% 2% 5% 0%;
+    }
+}
+
+@media screen and (min-width:900px) {
+    .main-box-container{
+        width: 100%;
+        display: flex;
+    }
+    
+    .main-box-left{
+        width: 25%;
+        float: left;
+        margin:2% 0% 5% 2%;
+    }
+    
+    .main-box-mid{
+        width: 50%;
+        float: left;
+        margin:2% 0% 5%;
+    }
+    
+    .main-box-right{
+        width: 25%;
+        float: left;
+        margin:2% 2% 5% 0%;
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    .main-box-container{
+        width: 100%;
+        display: flex;
+    }
+    
+    .main-box-left{
+        width: 25%;
+        float: left;
+        margin:2% 0% 5% 2%;
+    }
+    
+    .main-box-mid{
+        width: 50%;
+        float: left;
+        margin:2% 0% 5%;
+    }
+    
+    .main-box-right{
+        width: 25%;
+        float: left;
+        margin:2% 2% 5% 0%;
+    }
+}

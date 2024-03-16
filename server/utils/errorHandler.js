@@ -5,4 +5,5 @@ class ErrorHandler extends Error{
         Error.captureStackTrace(this, this.constructor)
     }
 }
-export default ErrorHandler;
+
+export default  ErrorHandler;

@@ -1,19 +1,19 @@
 // Built In
-import  OTPgenerator from "otp-generator"
+import OTPgenerator from "otp-generator"
 
 // Database
-import  Consumer from "../../models/Consumer/Consumer"
-import  FollowerFollowings from '../../models/FollowerFollowing/Followers&Followings'
+import Consumer from "../../models/Consumer/Consumer"
+import FollowerFollowings from '../../models/FollowerFollowing/Followers&Followings'
 
 // Created Middleware
-import  CatchAsync from "../../middlewares/catchAsync"
-import  ErrorHandler from "../../utils/errorHandler"
-import  authToken from "../../utils/authToken"
-import  sendEmail from "../../utils/sendMails"
-import  { HttpStatusCode } from "../../enums/httpHeaders"
-import  fileUploadService from "../../Services/FileUploadService"
+import CatchAsync from "../../middlewares/catchAsync"
+import ErrorHandler from "../../utils/errorHandler"
+import authToken from "../../utils/authToken"
+import sendEmail from "../../utils/sendMails"
+import { HttpStatusCode } from "../../enums/httpHeaders"
+import fileUploadService from "../../Services/FileUploadService"
 import { socio_Single_File_Upload } from '../../Services/ImageUploader'
-import  eventZar_Response from '../../utils/responses'
+import socio_Response from '../../utils/responses'
 
 /* 
     Index: 
@@ -47,7 +47,7 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
     return next(new ErrorHandler("Password should be at least 8 characters long.", HttpStatusCode.UNPROCESSABLE_ENTITY));
   }
 
-  // Checking if username or email already been used by other customers
+  // Checking if username or email already been used by other Consumer
   const isUsernameExist = await Consumer.findOne({ username: req.body.username });
   const isEmailExist = await Consumer.findOne({ email: req.body.email });
 
@@ -58,7 +58,7 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
     return next(new ErrorHandler(`User already exit with provided ${req.body.email}`, HttpStatusCode.UNPROCESSABLE_ENTITY));
   }
 
-  // Generating OTP for customer account
+  // Generating OTP for Consumer account
   const OTP = OTPgenerator.generate(4, {
     upperCaseAlphabets: false,
     lowerCaseAlphabets: false,
@@ -70,7 +70,6 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
   let user = await Consumer.create({
     email: req.body.email.toLowerCase(),
     username: req.body.username.toLowerCase(),
-    role: "customer",
     password: req.body.password,
     userOTP: {
       otp: parseInt(OTP),
@@ -84,11 +83,11 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
 
   // Sending OTP to vendor
 
-  let message = `Dear ${username},\n\nGreetings of the day,\n\nYou account registration verification OTP is ${OTP}.\n\nThanks,\nEvents ZAR`;
+  let message = `Dear ${username},\n\nGreetings of the day,\n\nYou account registration verification OTP is ${OTP}.\n\nThanks,\nSocio`;
   try {
     await sendEmail({
       email: req.body.email,
-      subject: "Events ZAR Sign Up",
+      subject: "Socio Sign Up",
       message,
     });
   } catch (err) {
@@ -100,15 +99,14 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
   }
 
   // Sending response
-  const sendToken = await authToken.ConsumerendToken(res, user);
+  const sendToken = await authToken.userSendToken(res, user);
 
   if (!sendToken.success) {
     return next(new ErrorHandler(`Something went wrong while login, Please try again`, HttpStatusCode.BAD_REQUEST))
   } else {
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: 'OTP sent to you email address!',
-      usertoken: sendToken.userToken,
       isVerified: false,
       isProfile: false,
       OTP
@@ -168,15 +166,14 @@ export const socio_User_Account_Sign_In = CatchAsync(async (req, res, next) => {
   await user.save();
 
   // Sending response
-  const sendToken = await authToken.ConsumerendToken(res, user);
+  const sendToken = await authToken.userSendToken(res, user);
 
   if (!sendToken.success) {
     return next(new ErrorHandler(`Something went wrong while login, Please try again`, HttpStatusCode.BAD_REQUEST))
   } else {
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: 'Sign In Successful!',
-      usertoken: sendToken.userToken,
       isVerified: user.isAccountVerified,
       isProfile: user.isProfileCompleted
     })
@@ -187,7 +184,7 @@ export const socio_User_Account_Sign_In = CatchAsync(async (req, res, next) => {
 export const socio_User_Account_Sign_Out = CatchAsync(async (req, res, next) => {
   //  Setting null value for header authorization and cookie
   res.removeHeader("Authorization");
-  res.cookie("usertoken", null, {
+  res.cookie("consumerToken", null, {
     expires: new Date(Date.now()),
     httpOnly: true,
   });
@@ -224,7 +221,7 @@ export const socio_User_Account_OTP_Verification = CatchAsync(
 
     // Verifying otp
     if (user.userOTP.OTPVerified) {
-      return eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "Account OTP already verified!",
       });
@@ -233,7 +230,7 @@ export const socio_User_Account_OTP_Verification = CatchAsync(
       user.userOTP.timeToExpire = undefined;
       user.userOTP.OTPVerified = false;
       await user.save();
-      return eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "OTP has been Expired, Try with new one!",
       });
@@ -245,12 +242,12 @@ export const socio_User_Account_OTP_Verification = CatchAsync(
         user.isAccountVerified = true;
         user.isAccountActive = true;
         await user.save();
-        return eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: true,
           message: "OTP Verified",
         });
       } else {
-        return eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: false,
           message: "Wrong OTP provided",
         });
@@ -271,7 +268,7 @@ export const socio_User_Account_Resend_OTP = CatchAsync(async (req, res, next) =
       );
     });
 
-  // Generating OTP for customer account
+  // Generating OTP for Consumer account
   const OTP = OTPgenerator.generate(4, {
     upperCaseAlphabets: false,
     lowerCaseAlphabets: false,
@@ -286,16 +283,16 @@ export const socio_User_Account_Resend_OTP = CatchAsync(async (req, res, next) =
   await user.save();
 
   // d) Sending OTP
-  let message = `Dear ${user.username},\n\nGreeting of the day,\n\nPlease use this OTP ${OTP} for verification.\n\nThanks,\nEvents ZAR`;
+  let message = `Dear ${user.username},\n\nGreeting of the day,\n\nPlease use this OTP ${OTP} for verification.\n\nThanks,\nSocio`;
   try {
     await sendEmail({
       email: user.email,
-      subject: "Verification OTP",
+      subject: "Socio Verification OTP",
       message,
     });
     user.userOTP.otp = OTP;
     user.userOTP.timeToExpire = Date.now() + +960000;
-    user.userOTP.OTPVerifed = false;
+    user.userOTP.OTPVerified = false;
     await user.save();
   } catch (err) {
     return next(
@@ -304,7 +301,7 @@ export const socio_User_Account_Resend_OTP = CatchAsync(async (req, res, next) =
   }
 
   // Sending response
-  eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+  socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
     success: true,
     message: "OTP Sent Successfully!",
     OTP
@@ -356,20 +353,20 @@ export const socio_User_Account_Forgot_Password = CatchAsync(
     // Saving otp
     user.userOTP.otp = OTP;
     user.userOTP.timeToExpire = Date.now() + +960000;
-    user.userOTP.OTPVerifed = false;
+    user.userOTP.OTPVerified = false;
     await user.save();
 
     // d) Sending OTP
-    let message = `Dear ${user.username},\n\nGreeting of the day,\n\nPlease use this OTP ${OTP} for verification.\n\nThanks,\nEvents ZAR`;
+    let message = `Dear ${user.username},\n\nGreeting of the day,\n\nPlease use this OTP ${OTP} for verification.\n\nThanks,\nSocio`;
     try {
       await sendEmail({
         email: user.email,
-        subject: "OTP for Account Recovery!",
+        subject: "Socio Account Recovery!",
         message,
       });
       user.forgotOTP.otp = OTP;
       user.forgotOTP.timeToExpire = Date.now() + 960000;
-      user.forgotOTP.OTPVerifed = false;
+      user.forgotOTP.OTPVerified = false;
       await user.save();
     } catch (err) {
       return next(
@@ -378,7 +375,7 @@ export const socio_User_Account_Forgot_Password = CatchAsync(
     }
 
     // Sending response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: "OTP Sent Successfully!",
     })
@@ -416,7 +413,7 @@ export const socio_User_Account_Forgot_Password_OTP_Verify = CatchAsync(
 
     // Verifying otp
     if (user.forgotOTP.OTPVerified) {
-      eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "Account OTP already verified!",
       })
@@ -425,7 +422,7 @@ export const socio_User_Account_Forgot_Password_OTP_Verify = CatchAsync(
       user.forgotOTP.timeToExpire = undefined;
       user.forgotOTP.OTPVerified = false;
       await user.save();
-      eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "OTP has been Expired, Try with new one!",
       })
@@ -435,12 +432,12 @@ export const socio_User_Account_Forgot_Password_OTP_Verify = CatchAsync(
         user.forgotOTP.timeToExpire = undefined;
         user.forgotOTP.OTPVerifed = true;
         await user.save();
-        eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: true,
           message: "OTP Verified",
         })
       } else {
-        eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: false,
           message: "Wrong OTP provided",
         })
@@ -461,7 +458,7 @@ export const socio_User_Account_Reset_Password = CatchAsync(
     )
       return next(
         new ErrorHandler(
-          `Plese provide all details!`,
+          `Please provide all details!`,
           HttpStatusCode.NOT_ACCEPTABLE
         )
       );
@@ -483,7 +480,7 @@ export const socio_User_Account_Reset_Password = CatchAsync(
       );
 
     // c) Checking if OTP is verified and if new and confirm password are same
-    if (!user.forgotOTP.OTPVerifed)
+    if (!user.forgotOTP.OTPVerified)
       return next(
         new ErrorHandler(
           `Account reset OTP yet not verified!`,
@@ -501,15 +498,13 @@ export const socio_User_Account_Reset_Password = CatchAsync(
 
     // d) Saving password and other details
     user.password = req.body.newPassword;
-    user.forgotOTP.otp = undefined;
-    user.forgotOTP.timeToExpire = undefined;
-    user.forgotOTP.OTPVerifed = undefined;
-    (user.resetPasswordToken = undefined),
-      (user.resetPasswordExpire = undefined);
+    user.forgotOTP = undefined;
+    user.resetPasswordToken = undefined,
+      user.resetPasswordExpire = undefined;
     await user.save();
 
     // e) Sending response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: `Account recovery is successful!`,
     })
@@ -559,7 +554,7 @@ export const socio_User_Account_Password_Update = CatchAsync(
     await is_user.save();
 
     // Sending Response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: "Password updated Successfully",
     })
@@ -570,8 +565,8 @@ export const socio_User_Account_Password_Update = CatchAsync(
 export const socio_User_Account_Information = CatchAsync(
   async (req, res, next) => {
     // Fetching user information
-    const userData = await Consumer.findById({ _id: req.user.id })
-      .select("+isAccountVerified +isProfileCompleted +role +hasBusiness")
+    const isConsumer = await Consumer.findById({ _id: req.user.id })
+      .select("+isAccountVerified +isProfileCompleted")
       .populate("userAccount")
       .populate("businessAccount")
       .catch((err) => {
@@ -579,13 +574,8 @@ export const socio_User_Account_Information = CatchAsync(
       });
 
     // Checking if user data
-    if (!userData) {
+    if (!isConsumer) {
       return next(new ErrorHandler(`User not found`, HttpStatusCode.NOT_FOUND))
-    }
-
-    // Checking for role type
-    if (userData.hasBusiness && userData.role === 'business') {
-      return next(new ErrorHandler(`Please switch to user profile`, HttpStatusCode.FORBIDDEN))
     }
 
     // Fetching follower count
@@ -594,42 +584,39 @@ export const socio_User_Account_Information = CatchAsync(
 
     // Response Object
     let responseData = {
-      _id: userData._id,
-      username: userData.username,
-      email: userData.email,
-      tempAccount: userData.role,
+      _id: isConsumer._id,
+      username: isConsumer.username,
+      email: isConsumer.email,
       followers: followerCount,
       followings: followingCount,
       profile: undefined,
     };
 
-    if (userData.isProfileCompleted) {
+    if (isConsumer.isProfileCompleted) {
       responseData.profile = {
-        firstname: userData.userAccount.firstname || undefined,
-        lastname: userData.userAccount.lastname || undefined,
-        gender: userData.userAccount.gender || undefined,
-        dob: userData.userAccount.dateOfBirth || undefined,
-        bio: userData.userAccount.profileSummary || undefined,
-        plotnumber: userData.userAccount.plotnumber || undefined,
-        address: userData.userAccount.address || undefined,
-        city: userData.userAccount.city || undefined,
-        state: userData.userAccount.state || undefined,
-        country: userData.userAccount.country || undefined,
-        zipCode: userData.userAccount.zipCode || undefined,
-        location: userData.userAccount.location || undefined,
-        profilePicture: userData.userAccount.profilePicture || undefined,
-        gallery: null,
+        firstName: isConsumer.firstName || undefined,
+        lastName: isConsumer.lastName || undefined,
+        gender: isConsumer.gender || undefined,
+        dob: isConsumer.dateOfBirth || undefined,
+        bio: isConsumer.profileSummary || undefined,
+        plotNumber: isConsumer.plotNumber || undefined,
+        address: isConsumer.address || undefined,
+        city: isConsumer.city || undefined,
+        state: isConsumer.state || undefined,
+        country: isConsumer.country || undefined,
+        zipCode: isConsumer.zipCode || undefined,
+        location: isConsumer.location || undefined,
+        profilePicture: isConsumer.profilePicture || undefined,
       };
     }
 
     // Sending Response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: `User Profile Information`,
       user: responseData,
-      isVerified: userData.isAccountVerified,
-      isProfile: userData.isProfileCompleted,
-      hasBusiness: userData.hasBusiness ? true : false,
+      isVerified: isConsumer.isAccountVerified,
+      isProfile: isConsumer.isProfileCompleted,
     })
   }
 );
@@ -638,14 +625,10 @@ export const socio_User_Account_Information = CatchAsync(
 export const socio_User_Account_Information_Update = CatchAsync(async (req, res, next) => {
 
   // fetching user details
-  let userAccount = await UserAccount.findOne({ user: req.user.id }).catch((err) => console.log(err));
-
-  if (!userAccount) {
-    userAccount = await UserAccount.create({ user: req.user.id, });
-  }
+  let consumer = await Consumer.findOne({ user: req.user.id }).catch((err) => console.log(err));
 
   // Is account fetched
-  if (!userAccount) {
+  if (!consumer) {
     return next(new ErrorHandler(`Something went wrong, Please try again or login again!`, HttpStatusCode.NOT_FOUND));
   }
 
@@ -660,79 +643,75 @@ export const socio_User_Account_Information_Update = CatchAsync(async (req, res,
     if (profileImageToUpload.size / 1024 >= 1024) {
       return next(new ErrorHandler(`Image size  should be less than 1MB.`, HttpStatusCode.NOT_FOUND));
     } else {
-      const uploadImageResult = await socio_Single_File_Upload(profileImageToUpload, `eventsZar/customer/${req.user.id}/profile`)
+      const uploadImageResult = await socio_Single_File_Upload(profileImageToUpload, `socio/consumer/${req.user.id}/profile`)
       profileImg = { name: profileImageToUpload.name.toString(), public_id: uploadImageResult.publicId, url: uploadImageResult.imageUrl };
     }
   }
 
   // Checking if required fields exists
-  if ((!userAccount.firstname && !req.body.firstname) || (!userAccount.lastname && !req.body.lastname) || (!userAccount.profileSummary && !req.body.bio) || (!userAccount.dateOfBirth && !req.body.dateOfBirth) || (!userAccount.gender && !req.body.gender)) {
+  if ((!consumer.firstName && !req.body.firstName) || (!consumer.lastName && !req.body.lastName) || (!consumer.profileSummary && !req.body.bio) || (!consumer.dateOfBirth && !req.body.dateOfBirth) || (!consumer.gender && !req.body.gender)) {
     return next(new ErrorHandler(`Some fields are missing!`, HttpStatusCode.NOT_FOUND));
   }
 
   // Updating user information
-  userAccount.firstname = req.body.firstname ? req.body.firstname.toLowerCase() : userAccount.firstname;
-  userAccount.lastname = req.body.lastname ? req.body.lastname.toLowerCase() : userAccount.lastname;
-  userAccount.profileSummary = req.body.bio ? req.body.bio.toLowerCase() : userAccount.profileSummary;
-  userAccount.dateOfBirth = req.body.dateOfBirth ? req.body.dateOfBirth : userAccount.dateOfBirth;
-  userAccount.gender = req.body.gender ? req.body.gender.toLowerCase() : userAccount.gender;
-  userAccount.profilePicture = req.files?.profilePicture ? profileImg : userAccount.profilePicture ? userAccount.profilePicture : undefined;
-  await userAccount.save();
+  consumer.firstName = req.body.firstName ? req.body.firstName.toLowerCase() : consumer.firstName;
+  consumer.lastName = req.body.lastName ? req.body.lastName.toLowerCase() : consumer.lastName;
+  consumer.profileSummary = req.body.bio ? req.body.bio.toLowerCase() : consumer.profileSummary;
+  consumer.dateOfBirth = req.body.dateOfBirth ? req.body.dateOfBirth : consumer.dateOfBirth;
+  consumer.gender = req.body.gender ? req.body.gender.toLowerCase() : consumer.gender;
+  consumer.profilePicture = req.files?.profilePicture ? profileImg : consumer.profilePicture ? consumer.profilePicture : undefined;
+  await consumer.save();
 
   // Updating user isProfile
-  if (req.body.firstname && req.body.lastname && req.body.bio && req.body.dateOfBirth && req.body.gender) {
-    await Consumer.findByIdAndUpdate({ _id: userAccount.user }, { isProfileCompleted: true, userAccount: userAccount._id }, { new: true });
+  if (req.body.firstName && req.body.lastName && req.body.bio && req.body.dateOfBirth && req.body.gender) {
+    await Consumer.findByIdAndUpdate({ _id: userAccount.user }, { isProfileCompleted: true }, { new: true });
   }
 
-  const userData = await Consumer.findById({ _id: req.user.id })
+  const isConsumer = await Consumer.findById({ _id: req.user.id })
     .select("+isAccountVerified +isProfileCompleted")
-    .populate("userAccount")
     .catch((err) => {
       console.log(err);
     });
 
-  if (!userData) {
+  if (!isConsumer) {
     return next(new ErrorHandler(`User data not found`, HttpStatusCode.NOT_FOUND));
   }
 
   let responseData = {
-    _id: userData._id,
-    username: userData.username,
-    email: userData.email,
-    followers: userData.followers.length,
-    followings: userData.followings.length,
+    _id: isConsumer._id,
+    username: isConsumer.username,
+    email: isConsumer.email,
+    followers: isConsumer.followers.length,
+    followings: isConsumer.followings.length,
     profile: undefined,
   };
 
-  if (userData.isProfileCompleted) {
+  if (isConsumer.isProfileCompleted) {
     responseData.profile = {
-      firstname: userData.userAccount.firstname || undefined,
-      lastname: userData.userAccount.lastname || undefined,
-      gender: userData.userAccount.gender || undefined,
-      dob: userData.userAccount.dateOfBirth || undefined,
-      bio: userData.userAccount.profileSummary || undefined,
+      firstName: isConsumer.firstName || undefined,
+      lastName: isConsumer.lastName || undefined,
+      gender: isConsumer.gender || undefined,
+      dob: isConsumer.dateOfBirth || undefined,
+      bio: isConsumer.profileSummary || undefined,
       profilePicture: undefined,
-      gallery: undefined,
-      plotnumber: userData.userAccount.plotnumber || undefined,
-      address: userData.userAccount.address || undefined,
-      city: userData.userAccount.city || undefined,
-      state: userData.userAccount.state || undefined,
-      country: userData.userAccount.country || undefined,
-      zipCode: userData.userAccount.zipCode || undefined,
-      location: userData.userAccount.location || undefined,
-      profilePicture: userData.userAccount.profilePicture || undefined,
-      gallery: null,
+      plotNumber: isConsumer.plotNumber || undefined,
+      address: isConsumer.address || undefined,
+      city: isConsumer.city || undefined,
+      state: isConsumer.state || undefined,
+      country: isConsumer.country || undefined,
+      zipCode: isConsumer.zipCode || undefined,
+      location: isConsumer.location || undefined,
+      profilePicture: isConsumer.profilePicture || undefined,
     };
   }
 
   // Sending Response
-  eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+  socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
     success: true,
     message: `User Information Updated Successfully!`,
     user: responseData,
-    isVerified: userData.isAccountVerified,
-    isProfile: userData.isProfileCompleted,
-    hasBusiness: userData.businessAccount ? true : false,
+    isVerified: isConsumer.isAccountVerified,
+    isProfile: isConsumer.isProfileCompleted,
   })
 }
 );
@@ -748,8 +727,8 @@ export const socio_User_Account_Profile_Image_Update = CatchAsync(
       if (typeof req.files.profilePicture === "array") {
         return next(new ErrorHandler(`Please upload single image only!`, HttpStatusCode.NOT_ACCEPTABLE));
       }
-      const isUser = await UserAccount.findOne({ user: req.user.id });
-      if (!isUser) {
+      const isConsumer = await Consumer.findOne({ user: req.user.id });
+      if (!isConsumer) {
         return next(new ErrorHandler(`Please update profile first!`, HttpStatusCode.NOT_ACCEPTABLE));
       }
 
@@ -759,16 +738,16 @@ export const socio_User_Account_Profile_Image_Update = CatchAsync(
         if (profileImageToUpload.size / 1024 >= 1024) {
           return next(new ErrorHandler(`Image size  should be less than 1MB.`, HttpStatusCode.NOT_ACCEPTABLE));
         } else {
-          const uploadImageResult = await socio_Single_File_Upload(profileImageToUpload, `eventsZar/customer/${req.user.id}/profile`)
+          const uploadImageResult = await socio_Single_File_Upload(profileImageToUpload, `socio/consumer/${req.user.id}/profile`)
           profileImg = { name: profileImageToUpload.name.toString(), public_id: uploadImageResult.publicId, url: uploadImageResult.imageUrl };
         }
       }
     }
-    isUser.profilePicture = req.files?.profilePicture ? profileImg : isUser.profilePicture ? isUser.profilePicture : undefined;
-    await isUser.save();
+    isConsumer.profilePicture = req.files?.profilePicture ? profileImg : isConsumer.profilePicture ? isConsumer.profilePicture : undefined;
+    await isConsumer.save();
 
     // Sending Response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: "Image uploaded successfully!",
     });
@@ -779,50 +758,38 @@ export const socio_User_Account_Profile_Image_Update = CatchAsync(
 export const socio_User_Account_Address_Update = CatchAsync(
   async (req, res, next) => {
     // fetching user details
-    const userAccount = await UserAccount.findOne({ user: req.user.id }).catch(
+    const isConsumer = await Consumer.findOne({ user: req.user.id }).catch(
       (err) => console.log(err)
     );
 
     // Is account fetched
-    if (!userAccount) {
+    if (!isConsumer) {
       return next(new ErrorHandler(`Please update profile first`, HttpStatusCode.BAD_REQUEST));
     }
 
     // checking for fields
     if (
-      (!userAccount.plotnumber && !req.body.plotnumber) ||
-      (!userAccount.address && !req.body.address) ||
-      (!userAccount.city && !req.body.city) ||
-      (!userAccount.state && !req.body.state) ||
-      (!userAccount.country && !req.body.country) ||
-      (!userAccount.zipCode && !req.body.zipCode)
+      (!isConsumer.plotNumber && !req.body.plotNumber) ||
+      (!isConsumer.address && !req.body.address) ||
+      (!isConsumer.city && !req.body.city) ||
+      (!isConsumer.state && !req.body.state) ||
+      (!isConsumer.country && !req.body.country) ||
+      (!isConsumer.zipCode && !req.body.zipCode)
     ) {
       return next(new ErrorHandler(`Please provide all details`, HttpStatusCode.NOT_ACCEPTABLE));
     }
 
     // updating data
-    userAccount.plotnumber = req.body.plotnumber
-      ? req.body.plotnumber.toLowerCase()
-      : userAccount.plotnumber;
-    userAccount.address = req.body.address
-      ? req.body.address.toLowerCase()
-      : userAccount.address;
-    userAccount.city = req.body.city
-      ? req.body.city.toLowerCase()
-      : userAccount.city;
-    userAccount.state = req.body.state
-      ? req.body.state.toLowerCase()
-      : userAccount.state;
-    userAccount.country = req.body.country
-      ? req.body.country.toLowerCase()
-      : userAccount.country;
-    userAccount.zipCode = req.body.zipCode
-      ? parseInt(req.body.zipCode)
-      : userAccount.zipCode;
-    await userAccount.save();
+    isConsumer.plotNumber = req.body.plotNumber ? req.body.plotNumber.toLowerCase() : isConsumer.plotNumber;
+    isConsumer.address = req.body.address ? req.body.address.toLowerCase() : isConsumer.address;
+    isConsumer.city = req.body.city ? req.body.city.toLowerCase() : isConsumer.city;
+    isConsumer.state = req.body.state ? req.body.state.toLowerCase() : isConsumer.state;
+    isConsumer.country = req.body.country ? req.body.country.toLowerCase() : isConsumer.country;
+    isConsumer.zipCode = req.body.zipCode ? parseInt(req.body.zipCode) : isConsumer.zipCode;
+    await isConsumer.save();
 
     // Sending response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.CREATED, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.CREATED, {
       success: true,
       message: `Address has been updated successfully!`,
     });
@@ -833,12 +800,12 @@ export const socio_User_Account_Address_Update = CatchAsync(
 export const socio_User_Account_Address_Location_Update = CatchAsync(
   async (req, res, next) => {
     // fetching user details
-    const userAccount = await UserAccount.findOne({ user: req.user.id }).catch(
+    const isConsumer = await Consumer.findOne({ user: req.user.id }).catch(
       (err) => console.log(err)
     );
 
     // Is account fetched
-    if (!userAccount) {
+    if (!isConsumer) {
       return next(new ErrorHandler(`Please update profile first!`, HttpStatusCode.NOT_FOUND));
     }
     //  Checking if the latitude and longitude is provided or not
@@ -847,13 +814,11 @@ export const socio_User_Account_Address_Location_Update = CatchAsync(
     }
 
     // Saving details
-    userAccount.location = {
-      coordinates: req.body.coordinate,
-    };
-    await userAccount.save();
+    isConsumer.location = { coordinates: req.body.coordinate};
+    await isConsumer.save();
 
     // Sending response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.CREATED, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.CREATED, {
       success: true,
       message: `Location has been created!`,
     });
@@ -864,70 +829,53 @@ export const socio_User_Account_Address_Location_Update = CatchAsync(
 export const socio_User_Account_Information_By_Other_User = CatchAsync(
   async (req, res, next) => {
     // Fetching user information
-    const isUser = await Consumer.findById({ _id: req.user.id })
-      .select('followers')
-      .catch((err) => {
-        console.log(err);
-      });
-
-    if (!isUser) {
+    if (!req.user.id) {
       return next(new ErrorHandler("Please login again!", HttpStatusCode.UNAUTHORIZED));
     }
 
-    const userData = await Consumer.findById({ _id: req.params.id })
+    const isConsumer = await Consumer.findById({ _id: req.params.id })
       .select("+isAccountVerified +isProfileCompleted")
       .populate("userAccount")
       .catch((err) => {
         console.log(err);
       });
 
-    if (!userData) {
+    if (!isConsumer) {
       return next(new ErrorHandler("No User Data Found!", HttpStatusCode.NOT_FOUND));
     }
 
-    // Check if user is followed by logged in and vice versa
-    let haveYouFollowed = userData.followers.includes(req.user.id);
-    let doYouFollowedByHim = isUser.followers.includes(userData._id)
-
     let responseData = {
-      _id: userData._id,
-      username: userData.username,
-      email: userData.email,
-      followers: userData.followers.length,
-      followings: userData.followings.length,
-      friends: userData.friendsList.length,
+      _id: isConsumer._id,
+      username: isConsumer.username,
+      followers: 0,
+      followings: 0,
       profile: undefined,
-      haveYouFollowed: haveYouFollowed,
-      followsYou: doYouFollowedByHim
     };
 
-    if (userData.isProfileCompleted) {
+    if (isConsumer.isProfileCompleted) {
       responseData.profile = {
-        firstname: userData.userAccount.firstname || undefined,
-        lastname: userData.userAccount.lastname || undefined,
-        gender: userData.userAccount.gender || undefined,
-        dob: userData.userAccount.dateOfBirth || undefined,
-        bio: userData.userAccount.profileSummary || undefined,
-        profilePicture: userData.userAccount.profilePicture,
+        firstName: isConsumer.firstName || undefined,
+        lastName: isConsumer.lastName || undefined,
+        gender: isConsumer.gender || undefined,
+        dob: isConsumer.dateOfBirth || undefined,
+        bio: isConsumer.profileSummary || undefined,
+        profilePicture: isConsumer.profilePicture,
         gallery: undefined,
-        plotnumber: userData.userAccount.plotnumber || undefined,
-        address: userData.userAccount.address || undefined,
-        city: userData.userAccount.city || undefined,
-        state: userData.userAccount.state || undefined,
-        country: userData.userAccount.country || undefined,
-        zipCode: userData.userAccount.zipCode || undefined,
-        location: userData.userAccount.location || undefined,
+        plotNumber: isConsumer.plotNumber || undefined,
+        address: isConsumer.address || undefined,
+        city: isConsumer.city || undefined,
+        state: isConsumer.state || undefined,
+        country: isConsumer.country || undefined,
+        zipCode: isConsumer.zipCode || undefined,
+        location: isConsumer.location || undefined,
       };
     }
 
     // Send Response
-    eventZar_Response.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: `User Profile Information`,
       user: responseData,
-      isVerified: userData.isAccountVerified,
-      isProfile: userData.isProfileCompleted,
-      hasBusiness: userData.businessAccount ? true : false,
     });
   }
 );

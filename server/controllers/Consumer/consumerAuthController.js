@@ -2,18 +2,18 @@
 import OTPgenerator from "otp-generator"
 
 // Database
-import Consumer from "../../models/Consumer/Consumer"
-import FollowerFollowings from '../../models/FollowerFollowing/Followers&Followings'
+import Consumer from "../../models/Consumer/Consumer.js"
+import FollowerFollowings from '../../models/FollowerFollowing/Followers&Followings.js'
 
 // Created Middleware
-import CatchAsync from "../../middlewares/catchAsync"
-import ErrorHandler from "../../utils/errorHandler"
-import authToken from "../../utils/authToken"
-import sendEmail from "../../utils/sendMails"
-import { HttpStatusCode } from "../../enums/httpHeaders"
-import fileUploadService from "../../Services/FileUploadService"
-import { socio_Single_File_Upload } from '../../Services/ImageUploader'
-import socio_Response from '../../utils/responses'
+import CatchAsync from "../../middlewares/catchAsync.js"
+import ErrorHandler from "../../utils/errorHandler.js"
+import authToken from "../../utils/authToken.js"
+import sendEmail from "../../utils/sendMails.js"
+import HttpStatusCode from "../../enums/httpHeaders.js"
+import fileUploadService from "../../Services/FileUploadService.js"
+import { socio_Single_File_Upload } from '../../Services/ImageUploader.js'
+import socioGeneralResponse from '../../utils/responses.js'
 
 /* 
     Index: 
@@ -77,9 +77,6 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
       OTPVerified: false,
     },
   });
-  let accountID = await UserAccount.create({ user: Consumer._id });
-  user.userAccount = accountID._id;
-  await user.save();
 
   // Sending OTP to vendor
 
@@ -104,7 +101,7 @@ export const socio_User_Account_Sign_Up = CatchAsync(async (req, res, next) => {
   if (!sendToken.success) {
     return next(new ErrorHandler(`Something went wrong while login, Please try again`, HttpStatusCode.BAD_REQUEST))
   } else {
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: 'OTP sent to you email address!',
       isVerified: false,
@@ -171,7 +168,7 @@ export const socio_User_Account_Sign_In = CatchAsync(async (req, res, next) => {
   if (!sendToken.success) {
     return next(new ErrorHandler(`Something went wrong while login, Please try again`, HttpStatusCode.BAD_REQUEST))
   } else {
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: 'Sign In Successful!',
       isVerified: user.isAccountVerified,
@@ -221,7 +218,7 @@ export const socio_User_Account_OTP_Verification = CatchAsync(
 
     // Verifying otp
     if (user.userOTP.OTPVerified) {
-      return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      return socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "Account OTP already verified!",
       });
@@ -230,7 +227,7 @@ export const socio_User_Account_OTP_Verification = CatchAsync(
       user.userOTP.timeToExpire = undefined;
       user.userOTP.OTPVerified = false;
       await user.save();
-      return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      return socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "OTP has been Expired, Try with new one!",
       });
@@ -242,12 +239,12 @@ export const socio_User_Account_OTP_Verification = CatchAsync(
         user.isAccountVerified = true;
         user.isAccountActive = true;
         await user.save();
-        return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        return socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: true,
           message: "OTP Verified",
         });
       } else {
-        return socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        return socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: false,
           message: "Wrong OTP provided",
         });
@@ -279,7 +276,7 @@ export const socio_User_Account_Resend_OTP = CatchAsync(async (req, res, next) =
   // Saving otp
   user.userOTP.otp = OTP;
   user.userOTP.timeToExpire = Date.now() + 960000;
-  user.userOTP.OTPVerifed = false;
+  user.userOTP.OTPVerified = false;
   await user.save();
 
   // d) Sending OTP
@@ -301,10 +298,9 @@ export const socio_User_Account_Resend_OTP = CatchAsync(async (req, res, next) =
   }
 
   // Sending response
-  socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+  socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
     success: true,
-    message: "OTP Sent Successfully!",
-    OTP
+    message: "OTP Sent Successfully!"
   })
 });
 
@@ -375,7 +371,7 @@ export const socio_User_Account_Forgot_Password = CatchAsync(
     }
 
     // Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: "OTP Sent Successfully!",
     })
@@ -413,7 +409,7 @@ export const socio_User_Account_Forgot_Password_OTP_Verify = CatchAsync(
 
     // Verifying otp
     if (user.forgotOTP.OTPVerified) {
-      socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "Account OTP already verified!",
       })
@@ -422,7 +418,7 @@ export const socio_User_Account_Forgot_Password_OTP_Verify = CatchAsync(
       user.forgotOTP.timeToExpire = undefined;
       user.forgotOTP.OTPVerified = false;
       await user.save();
-      socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+      socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: false,
         message: "OTP has been Expired, Try with new one!",
       })
@@ -432,12 +428,12 @@ export const socio_User_Account_Forgot_Password_OTP_Verify = CatchAsync(
         user.forgotOTP.timeToExpire = undefined;
         user.forgotOTP.OTPVerifed = true;
         await user.save();
-        socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: true,
           message: "OTP Verified",
         })
       } else {
-        socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
           success: false,
           message: "Wrong OTP provided",
         })
@@ -504,7 +500,7 @@ export const socio_User_Account_Reset_Password = CatchAsync(
     await user.save();
 
     // e) Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: `Account recovery is successful!`,
     })
@@ -554,7 +550,7 @@ export const socio_User_Account_Password_Update = CatchAsync(
     await is_user.save();
 
     // Sending Response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: "Password updated Successfully",
     })
@@ -567,8 +563,6 @@ export const socio_User_Account_Information = CatchAsync(
     // Fetching user information
     const isConsumer = await Consumer.findById({ _id: req.user.id })
       .select("+isAccountVerified +isProfileCompleted")
-      .populate("userAccount")
-      .populate("businessAccount")
       .catch((err) => {
         console.log(err);
       });
@@ -611,7 +605,7 @@ export const socio_User_Account_Information = CatchAsync(
     }
 
     // Sending Response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: `User Profile Information`,
       user: responseData,
@@ -625,7 +619,7 @@ export const socio_User_Account_Information = CatchAsync(
 export const socio_User_Account_Information_Update = CatchAsync(async (req, res, next) => {
 
   // fetching user details
-  let consumer = await Consumer.findOne({ user: req.user.id }).catch((err) => console.log(err));
+  let consumer = await Consumer.findOne({ _id: req.user.id }).catch((err) => console.log(err));
 
   // Is account fetched
   if (!consumer) {
@@ -664,7 +658,7 @@ export const socio_User_Account_Information_Update = CatchAsync(async (req, res,
 
   // Updating user isProfile
   if (req.body.firstName && req.body.lastName && req.body.bio && req.body.dateOfBirth && req.body.gender) {
-    await Consumer.findByIdAndUpdate({ _id: userAccount.user }, { isProfileCompleted: true }, { new: true });
+    await Consumer.findByIdAndUpdate({ _id: consumer._id }, { isProfileCompleted: true }, { new: true });
   }
 
   const isConsumer = await Consumer.findById({ _id: req.user.id })
@@ -681,8 +675,8 @@ export const socio_User_Account_Information_Update = CatchAsync(async (req, res,
     _id: isConsumer._id,
     username: isConsumer.username,
     email: isConsumer.email,
-    followers: isConsumer.followers.length,
-    followings: isConsumer.followings.length,
+    followers: 0,
+    followings: 0,
     profile: undefined,
   };
 
@@ -706,7 +700,7 @@ export const socio_User_Account_Information_Update = CatchAsync(async (req, res,
   }
 
   // Sending Response
-  socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+  socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
     success: true,
     message: `User Information Updated Successfully!`,
     user: responseData,
@@ -747,7 +741,7 @@ export const socio_User_Account_Profile_Image_Update = CatchAsync(
     await isConsumer.save();
 
     // Sending Response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: "Image uploaded successfully!",
     });
@@ -755,75 +749,66 @@ export const socio_User_Account_Profile_Image_Update = CatchAsync(
 );
 
 // ✅ 13) --- ADDRESS UPDATE ---
-export const socio_User_Account_Address_Update = CatchAsync(
-  async (req, res, next) => {
-    // fetching user details
-    const isConsumer = await Consumer.findOne({ user: req.user.id }).catch(
-      (err) => console.log(err)
-    );
+export const socio_User_Account_Address_Update = CatchAsync(async (req, res, next) => {
+  // fetching user details
+  const isConsumer = await Consumer.findOne({ _id: req.user.id }).catch(
+    (err) => console.log(err)
+  );
 
-    // Is account fetched
-    if (!isConsumer) {
-      return next(new ErrorHandler(`Please update profile first`, HttpStatusCode.BAD_REQUEST));
-    }
-
-    // checking for fields
-    if (
-      (!isConsumer.plotNumber && !req.body.plotNumber) ||
-      (!isConsumer.address && !req.body.address) ||
-      (!isConsumer.city && !req.body.city) ||
-      (!isConsumer.state && !req.body.state) ||
-      (!isConsumer.country && !req.body.country) ||
-      (!isConsumer.zipCode && !req.body.zipCode)
-    ) {
-      return next(new ErrorHandler(`Please provide all details`, HttpStatusCode.NOT_ACCEPTABLE));
-    }
-
-    // updating data
-    isConsumer.plotNumber = req.body.plotNumber ? req.body.plotNumber.toLowerCase() : isConsumer.plotNumber;
-    isConsumer.address = req.body.address ? req.body.address.toLowerCase() : isConsumer.address;
-    isConsumer.city = req.body.city ? req.body.city.toLowerCase() : isConsumer.city;
-    isConsumer.state = req.body.state ? req.body.state.toLowerCase() : isConsumer.state;
-    isConsumer.country = req.body.country ? req.body.country.toLowerCase() : isConsumer.country;
-    isConsumer.zipCode = req.body.zipCode ? parseInt(req.body.zipCode) : isConsumer.zipCode;
-    await isConsumer.save();
-
-    // Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.CREATED, {
-      success: true,
-      message: `Address has been updated successfully!`,
-    });
+  // Is account fetched
+  if (!isConsumer) {
+    return next(new ErrorHandler(`Please update profile first`, HttpStatusCode.BAD_REQUEST));
   }
+
+  // checking for fields
+  if ((!isConsumer.plotNumber && !req.body.plotNumber) || (!isConsumer.address && !req.body.address) || (!isConsumer.city && !req.body.city) || (!isConsumer.state && !req.body.state) || (!isConsumer.country && !req.body.country) || (!isConsumer.zipCode && !req.body.zipCode)) {
+    return next(new ErrorHandler(`Please provide all details`, HttpStatusCode.NOT_ACCEPTABLE));
+  }
+
+  // updating data
+  isConsumer.plotNumber = req.body.plotNumber ? req.body.plotNumber.toLowerCase() : isConsumer.plotNumber;
+  isConsumer.address = req.body.address ? req.body.address.toLowerCase() : isConsumer.address;
+  isConsumer.city = req.body.city ? req.body.city.toLowerCase() : isConsumer.city;
+  isConsumer.state = req.body.state ? req.body.state.toLowerCase() : isConsumer.state;
+  isConsumer.country = req.body.country ? req.body.country.toLowerCase() : isConsumer.country;
+  isConsumer.zipCode = req.body.zipCode ? parseInt(req.body.zipCode) : isConsumer.zipCode;
+  await isConsumer.save();
+
+  // Sending response
+  socioGeneralResponse(req, res, HttpStatusCode.CREATED, {
+    success: true,
+    message: `Address has been updated successfully!`,
+  });
+}
 );
 
 // ✅ 14) --- USER LOCATION UPDATE ---
-export const socio_User_Account_Address_Location_Update = CatchAsync(
-  async (req, res, next) => {
-    // fetching user details
-    const isConsumer = await Consumer.findOne({ user: req.user.id }).catch(
-      (err) => console.log(err)
-    );
+export const socio_User_Account_Address_Location_Update = CatchAsync(async (req, res, next) => {
+  // fetching user details
+  const isConsumer = await Consumer.findOne({ _id: req.user.id }).catch(
+    (err) => console.log(err)
+  );
+  console.log(req.body)
 
-    // Is account fetched
-    if (!isConsumer) {
-      return next(new ErrorHandler(`Please update profile first!`, HttpStatusCode.NOT_FOUND));
-    }
-    //  Checking if the latitude and longitude is provided or not
-    if (!req.body.coordinate[0] || !req.body.coordinate[1]) {
-      return next(new ErrorHandler("Please provides  both Latitude and Longitude", HttpStatusCode.NOT_ACCEPTABLE));
-    }
-
-    // Saving details
-    isConsumer.location = { coordinates: req.body.coordinate};
-    await isConsumer.save();
-
-    // Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.CREATED, {
-      success: true,
-      message: `Location has been created!`,
-    });
+  // Is account fetched
+  if (!isConsumer) {
+    return next(new ErrorHandler(`Please update profile first!`, HttpStatusCode.NOT_FOUND));
   }
-);
+  //  Checking if the latitude and longitude is provided or not
+  if (!req.body.coordinate[0] || !req.body.coordinate[1]) {
+    return next(new ErrorHandler("Please provides  both Latitude and Longitude", HttpStatusCode.NOT_ACCEPTABLE));
+  }
+
+  // Saving details
+  isConsumer.location = { type: "Point", coordinates: [parseInt(req.body.coordinate[0]), parseInt(req.body.coordinate[1])] };
+  await isConsumer.save();
+
+  // Sending response
+  socioGeneralResponse(req, res, HttpStatusCode.CREATED, {
+    success: true,
+    message: `Location has been created!`,
+  });
+});
 
 // ✅ 15) --- USER PROFILE INFORMATION BY OTHER USER ---
 export const socio_User_Account_Information_By_Other_User = CatchAsync(
@@ -872,7 +857,7 @@ export const socio_User_Account_Information_By_Other_User = CatchAsync(
     }
 
     // Send Response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
       success: true,
       message: `User Profile Information`,
       user: responseData,

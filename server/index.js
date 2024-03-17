@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import cloudinary from 'cloudinary';
 import server from './app.js';
-const port = process.env.USERPORT || 5001;
+const port = process.env.USERPORT || 5000;
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_NAME,

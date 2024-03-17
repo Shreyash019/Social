@@ -1,7 +1,7 @@
 // Module Imports
 import express from 'express';
 import dotenv from 'dotenv';
-dotenv.config({ path: "./.env" });
+dotenv.config({ path: "./config/.env" });
 import http from 'http'
 import cors from 'cors';
 import helmet from 'helmet';
@@ -10,7 +10,7 @@ import cookieParser from 'cookie-parser';
 import fileUpload from "express-fileupload";
 import errorMiddleware from "./middlewares/error.js";
 import { Server as SocketIOServer } from 'socket.io';
-
+import apiTable from './routes/APITable.js';
 // Configurations
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -21,7 +21,10 @@ app.use(cors());
 app.use(morgan("combined"));
 app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } }));
 
+
+app.use('/api/v1', apiTable)
 app.use(errorMiddleware);
+
 
 // Create an HTTP server
 const appInstance = http.createServer(app); // Assuming you have an Express app instance

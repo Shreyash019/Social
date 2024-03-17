@@ -6,8 +6,8 @@ import ErrorHandler from './errorHandler.js';
 
 // Database Import
 import Consumer from '../models/Consumer/Consumer.js';
-import catchAsync from '../error/catchAsync.js';
-import { HttpStatusCode } from '../enums/httpHeaders.js';
+import catchAsync from '../middlewares/catchAsync.js';
+import HttpStatusCode from '../enums/httpHeaders.js';
 
 const authToken = {
 

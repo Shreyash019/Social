@@ -24,4 +24,4 @@ const HttpStatusCode = {
     SERVICE_UNAVAILABLE: 503
   };
   
-  module.exports = { HttpStatusCode };
+ export default HttpStatusCode;

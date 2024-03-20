@@ -103,10 +103,36 @@ router.route('/profile/:id').get(
     socio_User_Account_Information_By_Other_User
 );
 
-router.route('/all/consumer').get(
+router.route('/all/accounts').get(
     authToken.isAuthenticated, 
     socio_User_Account_All_Users_Account_List
 );
+
+router.route('follow/unfollow').get(
+    authToken.isAuthenticated,
+    socio_User_Account_Follow_UnFollow_A_User
+);
+
+router.route('/follower/following/count').get(
+    authToken.isAuthenticated,
+    socio_User_Account_Followers_Followings_Count
+);
+
+router.route('/followers/list').get(
+    authToken.isAuthenticated,
+    socio_User_Account_Fetching_Followers_List
+);
+
+router.route('/following/list').get(
+    authToken.isAuthenticated,
+    socio_User_Account_Fetching_Followings_List
+);
+
+router.route('/remove/follower').get(
+    authToken.isAuthenticated,
+    socio_User_Account_Remove_Followers_From_A_List
+);
+
 router.route('/profile/:id').get(
     authToken.isAuthenticated,
     socio_User_Account_Information_By_Other_User

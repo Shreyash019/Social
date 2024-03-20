@@ -11,8 +11,7 @@ import ErrorHandler from "../../utils/errorHandler.js"
 import authToken from "../../utils/authToken.js"
 import sendEmail from "../../utils/sendMails.js"
 import HttpStatusCode from "../../enums/httpHeaders.js"
-import fileUploadService from "../../Services/FileUploadService.js"
-import { socio_Single_File_Upload } from '../../Services/ImageUploader.js'
+import FileProcessor from "../../Services/fileProcessing/fileProcessorService.js";
 import socioGeneralResponse from '../../utils/responses.js'
 
 /* 
@@ -633,12 +632,11 @@ export const socio_User_Account_Information_Update = CatchAsync(async (req, res,
 
   let profileImg = {};
   if (req.files?.profilePicture) {
-    const profileImageToUpload = await fileUploadService.single_Profile_Image_File_Compress(req.files.profilePicture);
-    if (profileImageToUpload.size / 1024 >= 1024) {
-      return next(new ErrorHandler(`Image size  should be less than 1MB.`, HttpStatusCode.NOT_FOUND));
+    const uploadResponse = await FileProcessor(req.files.profilePicture, `socio/consumer${req.user.id}`, req.user.id, 'profile');
+    if (!uploadResponse.success) {
+      return next(new ErrorHandler(uploadResponse.message, HttpStatusCode.INTERNAL_SERVER_ERROR));
     } else {
-      const uploadImageResult = await socio_Single_File_Upload(profileImageToUpload, `socio/consumer/${req.user.id}/profile`)
-      profileImg = { name: profileImageToUpload.name.toString(), public_id: uploadImageResult.publicId, url: uploadImageResult.imageUrl };
+      profileImg = uploadResponse.results[0];
     }
   }
 
@@ -713,31 +711,32 @@ export const socio_User_Account_Information_Update = CatchAsync(async (req, res,
 // ✅ 12) --- ACCOUNT PROFILE IMAGE UPDATE ---
 export const socio_User_Account_Profile_Image_Update = CatchAsync(
   async (req, res, next) => {
+
+    // Fetching and Checking for consumer
+    let isConsumer = await Consumer.findOne({_id: req.user.id}).catch((err)=>console.log(err));
+    if(!isConsumer){
+      return next(new ErrorHandler(`Please login again, something went wrong!`, HttpStatusCode.BAD_REQUEST))
+    }
+    
     // Checking image size if it is provided
     if (!req.files || !req.files.profilePicture) {
       return next(new ErrorHandler(`Please provide an image!`, HttpStatusCode.NOT_ACCEPTABLE));
     }
-    if (req.files.profilePicture) {
-      if (typeof req.files.profilePicture === "array") {
-        return next(new ErrorHandler(`Please upload single image only!`, HttpStatusCode.NOT_ACCEPTABLE));
-      }
-      const isConsumer = await Consumer.findOne({ user: req.user.id });
-      if (!isConsumer) {
-        return next(new ErrorHandler(`Please update profile first!`, HttpStatusCode.NOT_ACCEPTABLE));
-      }
+    // Checking image size if it is provided
+    if (req.files.profilePicture.length > 1) {
+      return next(new ErrorHandler("Please upload single image only!", HttpStatusCode.NOT_FOUND));
+    }
 
-      let profileImg = {};
-      if (req.files?.profilePicture) {
-        const profileImageToUpload = await fileUploadService.single_Profile_Image_File_Compress(req.files.profilePicture);
-        if (profileImageToUpload.size / 1024 >= 1024) {
-          return next(new ErrorHandler(`Image size  should be less than 1MB.`, HttpStatusCode.NOT_ACCEPTABLE));
-        } else {
-          const uploadImageResult = await socio_Single_File_Upload(profileImageToUpload, `socio/consumer/${req.user.id}/profile`)
-          profileImg = { name: profileImageToUpload.name.toString(), public_id: uploadImageResult.publicId, url: uploadImageResult.imageUrl };
-        }
+    let profileImg = {};
+    if (req.files?.profilePicture) {
+      const uploadResponse = await FileProcessor(req.files.profilePicture, `socio/consumer${req.user.id}`, req.user.id, 'profile');
+      if (!uploadResponse.success) {
+        return next(new ErrorHandler(uploadResponse.message, HttpStatusCode.INTERNAL_SERVER_ERROR));
+      } else {
+        profileImg = uploadResponse.results[0];
       }
     }
-    isConsumer.profilePicture = req.files?.profilePicture ? profileImg : isConsumer.profilePicture ? isConsumer.profilePicture : undefined;
+    isConsumer.profilePicture = req.files.profilePicture ? profileImg : isConsumer.profilePicture ? isConsumer.profilePicture : undefined;
     await isConsumer.save();
 
     // Sending Response

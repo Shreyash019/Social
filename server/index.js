@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import cloudinary from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import server from './app.js';
 const port = process.env.USERPORT || 5000;
 

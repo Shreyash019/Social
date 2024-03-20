@@ -7,7 +7,7 @@ import CatchAsync from "../../middlewares/catchAsync.js";
 import ErrorHandler from "../../utils/errorHandler.js";
 import HttpStatusCode from "../../enums/httpHeaders.js";
 import APIFeatures from "../../utils/apiFeatures.js";
-import socio_Response from '../../utils/responses.js'
+import socioGeneralResponse from '../../utils/responses.js'
 
 /* 
     Index: 
@@ -41,8 +41,8 @@ async function UserExistenceCheck(data) {
 // ✅ 01) --- FETCHING ALL USERS ---
 export const socio_User_Account_All_Users_Account_List = CatchAsync(async (req, res, next) => {
     // Fetching total users count
-    const rltp = req.query.rltp;
-    let totalUsers = await Consumer.countDocuments({ isAccountVerified: true });
+
+    let totalUsers = await Consumer.countDocuments({ _id: { $ne: req.user.id }, isAccountVerified: true });
 
     // Fetching All
     let apiFeature = new APIFeatures(Consumer.find({ _id: { $ne: req.user.id }, isAccountVerified: true })
@@ -52,21 +52,20 @@ export const socio_User_Account_All_Users_Account_List = CatchAsync(async (req, 
 
     const isConsumer = await apiFeature.query;
 
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: true,
         message: "User list.",
-        usersCount: req.user?.id ? totalUsers - 1 : totalUsers,
-        isUsers,
+        usersCount: totalUsers,
+        users: isConsumer
     })
 });
 
 // ✅ 02) --- FOLLOW/UN-FOLLOW A USER ---
-export const socio_User_Account_Follow_UnFollow_A_User = CatchAsync(
-    async (req, res, next) => {
+export const socio_User_Account_Follow_UnFollow_A_User = CatchAsync(async (req, res, next) => {
 
         // Response Msg
         let responseObject = {
-            msgContent: '',
+        msgContent: '',
             isError: false
         };
         // Destructuring User and Receiver ID
@@ -106,7 +105,7 @@ export const socio_User_Account_Follow_UnFollow_A_User = CatchAsync(
         }
 
         // Sending response
-        socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
             success: true,
             message: responseObject.msgContent,
         })
@@ -123,7 +122,7 @@ export const socio_User_Account_Followers_Followings_Count = CatchAsync(
         const followingCount = await FollowerFollowings.countDocuments({ followedByUser: req.user.id })
 
         // Sending response
-        socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+        socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
             success: true,
             message: "Your followers and followings",
             followInfo: {
@@ -168,7 +167,7 @@ export const socio_User_Account_Fetching_Followers_List = CatchAsync(async (req,
 
 
     // Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: true,
         message: "Your followers!",
         followersCount: followerCount,
@@ -210,7 +209,7 @@ export const socio_User_Account_Fetching_Followings_List = CatchAsync(async (req
     })
 
     // Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: true,
         message: "Your followings!",
         followingsCount: followingCount,
@@ -231,7 +230,7 @@ export const socio_User_Account_Remove_Followers_From_A_List = CatchAsync(async 
     }
 
     // Sending response
-    socio_Response.socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    socioGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
         success: true,
         message: `Follower removed successfully!`
     })

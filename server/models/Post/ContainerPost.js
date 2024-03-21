@@ -59,7 +59,7 @@ const ContainerPostModelSchema = new mongoose.Schema(
         likeAllowed: { type: Boolean, default: false },
         commentAllowed: { type: Boolean, default: false },
         userLikes: { count: { type: Number, default: 0 }, recentLikedBy: [String] },
-        commentCount: { count: { type: Number, default: 0 }, recentCommentBy: [String] },
+        commentCount: { type: Number, default: 0  },
         location: { type: { type: String }, coordinates: [Number] },
     },
     { timestamps: true }

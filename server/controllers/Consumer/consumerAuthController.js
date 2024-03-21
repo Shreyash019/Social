@@ -12,7 +12,7 @@ import authToken from "../../utils/authToken.js"
 import sendEmail from "../../utils/sendMails.js"
 import HttpStatusCode from "../../enums/httpHeaders.js"
 import FileProcessor from "../../Services/fileProcessing/fileProcessorService.js";
-import socioGeneralResponse from '../../utils/responses.js'
+import {socioGeneralResponse} from '../../utils/responses.js'
 
 /* 
     Index: 

@@ -21,6 +21,10 @@ const EventPostModelSchema = new mongoose.Schema(
         },
         postImages: [
             {
+                fileType: {
+                    type: String,
+                    enum: ['video', 'image']
+                },
                 name: {
                     type: String,
                 },

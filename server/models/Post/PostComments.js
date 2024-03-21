@@ -1,17 +1,31 @@
 const mongoose = require('mongoose');
 
-const PostCommentModel = new mongoose.Schema(
+const PostCommentsSchema = new mongoose.Schema(
     {
-        postId: {
+        containerPost: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Post',
+            ref: 'ContainerPost',
             required: true
         },
-        userId: {
+        content: {
+            type: String,
+            required: true
+        },
+        user_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'Users',
             required: true
         }
     },
     { timestamps: true }
-)
+);
+
+// Pre-save hook to update updated_at timestamp
+PostCommentsSchema.pre('save', function (next) {
+    this.updated_at = Date.now();
+    next();
+});
+
+const PostComments = mongoose.model('PostComments', PostCommentsSchema);
+
+module.exports = PostComments;

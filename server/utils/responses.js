@@ -3,4 +3,4 @@ const socioGeneralResponse = function(req, res, statusCode, jsonData){
     if(res.req.user) res.req.user = undefined;
     res.status(statusCode).json(jsonData);
 }
-export default socioGeneralResponse;
+export {socioGeneralResponse};

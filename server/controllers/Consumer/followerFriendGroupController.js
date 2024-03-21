@@ -7,7 +7,7 @@ import CatchAsync from "../../middlewares/catchAsync.js";
 import ErrorHandler from "../../utils/errorHandler.js";
 import HttpStatusCode from "../../enums/httpHeaders.js";
 import APIFeatures from "../../utils/apiFeatures.js";
-import socioGeneralResponse from '../../utils/responses.js'
+import {socioGeneralResponse} from '../../utils/responses.js'
 
 /* 
     Index: 

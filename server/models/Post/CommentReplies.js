@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 
-const PostCommentsSchema = new mongoose.Schema(
+const CommentRepliesSchema = new mongoose.Schema(
     {
-        containerPost: {
+        comment: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'ContainerPost',
+            ref: 'PostComments',
             required: true
         },
         content: {
@@ -21,11 +21,11 @@ const PostCommentsSchema = new mongoose.Schema(
 );
 
 // Pre-save hook to update updated_at timestamp
-PostCommentsSchema.pre('save', function (next) {
+CommentRepliesSchema.pre('save', function (next) {
     this.updated_at = Date.now();
     next();
 });
 
-const PostComments = mongoose.model('PostComments', PostCommentsSchema);
+const CommentReplies = mongoose.model('CommentReplies', CommentRepliesSchema);
 
-export default PostComments;
+export default CommentReplies;

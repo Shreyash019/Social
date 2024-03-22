@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const SurveyPostModelSchema = new mongoose.Schema(
     {
@@ -13,11 +13,15 @@ const SurveyPostModelSchema = new mongoose.Schema(
         postSummary: {
             type: String
         },
-        postImages: [
+        postAssets: [
             {
                 fileType: {
                     type: String,
                     enum: ['video', 'image']
+                },
+                thumbnail: {
+                    type: Object,
+                    default: undefined
                 },
                 name: {
                     type: String,
@@ -46,7 +50,7 @@ const SurveyPostModelSchema = new mongoose.Schema(
         responses: [
             {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: 'Users', // Reference to your User schema (assuming it exists)
+                ref: 'Consumer', // Reference to your User schema (assuming it exists)
             },
             {
                 type: Object, // Response specific to the question type
@@ -63,4 +67,4 @@ const SurveyPostModelSchema = new mongoose.Schema(
 )
 
 const SurveyPost = mongoose.model('SurveyPost', SurveyPostModelSchema);
-module.exports = SurveyPost;
+export default SurveyPost;

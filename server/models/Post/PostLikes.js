@@ -1,15 +1,13 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const PostLikesSchema = new mongoose.Schema(
     {
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Users',
+            ref: 'Consumer',
         },
         posts: [
-            {
-                type: mongoose.Schema.Types.ObjectId
-            }
+            { type: mongoose.Schema.Types.ObjectId }
         ]
     }, 
     {
@@ -18,4 +16,4 @@ const PostLikesSchema = new mongoose.Schema(
 );
 
 const PostLikes = mongoose.model('PostLikes', PostLikesSchema);
-module.exports = PostLikes;
+export default PostLikes;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const NormalPublicPostModelSchema = new mongoose.Schema(
     {
@@ -17,11 +17,15 @@ const NormalPublicPostModelSchema = new mongoose.Schema(
         postSummary: {
             type: String
         },
-        postImages: [
+        postAssets: [
             {
                 fileType: {
                     type: String,
                     enum: ['video', 'image']
+                },
+                thumbnail: {
+                    type: Object,
+                    default: undefined
                 },
                 name: {
                     type: String,
@@ -39,4 +43,4 @@ const NormalPublicPostModelSchema = new mongoose.Schema(
 )
 
 const NormalPost = mongoose.model('NormalPost', NormalPublicPostModelSchema);
-module.exports = NormalPost;
+export default NormalPost;

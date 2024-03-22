@@ -76,39 +76,3 @@ class ApiFeatures {
 }
 
 export default ApiFeatures;
-
-// // Assuming you have a "Post" model/schema in your MongoDB
-
-// // Function to fetch paginated posts with preFiltering
-// async function getPaginatedPosts(pageNumber, pageSize, userId) {
-//     const blockedUsers = await getBlockedUsers(userId); // Get a list of blocked user IDs
-
-//     // Construct the query with prefiltering conditions
-//     const query = {
-//       $and: [
-//         { userId: { $nin: blockedUsers } }, // Exclude posts from blocked users
-//         { isGroupPost: false } // Exclude group posts
-//       ]
-//     };
-
-//     // Fetch the paginated posts with prefiltering
-//     const posts = await Post.find(query)
-//       .sort({ createdAt: -1 })
-//       .skip((pageNumber - 1) * pageSize)
-//       .limit(pageSize);
-
-//     return posts;
-//   }
-
-//   // Usage
-//   const pageNumber = 1;
-//   const pageSize = 20;
-//   const userId = 'YOUR_USER_ID';
-
-//   getPaginatedPosts(pageNumber, pageSize, userId)
-//     .then(posts => {
-//       console.log(posts);
-//     })
-//     .catch(err => {
-//       console.error('Error fetching paginated posts:', err);
-//     });

@@ -1,19 +1,15 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const ContainerPostModelSchema = new mongoose.Schema(
     {
         postOwner: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+            ref: "Consumer",
             required: true,
-        },
-        ownerType: {
-            type: String,
-            enum: ['user', 'business']
         },
         postType: {
             type: String,
-            enum: ['normal', 'event', 'survey','poll', 'buzzads'],
+            enum: ['normal', 'survey','poll'],
             required: true
         },
         postVisibility: {
@@ -28,22 +24,12 @@ const ContainerPostModelSchema = new mongoose.Schema(
             ref: "NormalPost",
             select: false
         },
-        eventPost: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "EventPost",
-            select: false
-        },
         surveyPost: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "SurveyPost",
             select: false
         },
         dateOfPost: { type: Date, default: Date.now() },
-        taggedGroup:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "UserGroups",
-            select: false
-        },
         privateMembers: {
             type: [
                 {   type: mongoose.Schema.Types.ObjectId,
@@ -69,4 +55,5 @@ const ContainerPostModelSchema = new mongoose.Schema(
 ContainerPostModelSchema.index({ location: '2dsphere' });
 
 const ContainerPost = mongoose.model('ContainerPost', ContainerPostModelSchema);
-module.exports = ContainerPost;
+
+export default ContainerPost;

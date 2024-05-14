@@ -8,7 +8,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import fileUpload from "express-fileupload";
-import errorMiddleware from "./middlewares/error.js";
+import errorMiddleware from "./error/error.js";
 import { Server as SocketIOServer } from 'socket.io';
 import apiTable from './routes/APITable.js';
 // Configurations

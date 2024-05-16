@@ -12,7 +12,7 @@ const options = {
 const geocoder = NodeGeocoder(options);
 
 // Function to fetch country from coordinates
-export const getCountryFromCoordinates = async function (latitude, longitude) {
+exports.getCountryFromCoordinates = async function (latitude, longitude) {
     try {
         // Perform reverse geocoding to obtain address information
         const result = await geocoder.reverse({ lat: latitude, lon: longitude });
@@ -30,7 +30,7 @@ export const getCountryFromCoordinates = async function (latitude, longitude) {
 }
 
 // Function to fetch coordinates from an IP address
-export const getCoordinatesFromIP = async function (ipAddress) {
+exports.getCoordinatesFromIP = async function (ipAddress) {
     try {
         // Make HTTP GET request to ipinfo.io API
         const response = await axios.get(`https://ipinfo.io/${ipAddress}/json`);

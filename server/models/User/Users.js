@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
-const ConsumerSchemaModel = new mongoose.Schema(
+const UserSchemaModel = new mongoose.Schema(
     {
         isAccountVerified: {
             type: Boolean,
@@ -19,14 +19,30 @@ const ConsumerSchemaModel = new mongoose.Schema(
             default: false,
             select: false
         },
+        isChatAllowed: {
+            type: Boolean,
+            default: true
+        },
+        isViewPortfolioAllowed: {
+            type: Boolean,
+            default: true
+        },
+        isViewEventAllowed: {
+            type: Boolean,
+            default: true
+        },
+        isViewPostAllowed: {
+            type: Boolean,
+            default: true
+        },
         isPrivate: {
             type: Boolean,
             default: false,
             select: false
         },
+
         username: {
             type: String,
-            required: true,
             unique: true
         },
         email: {
@@ -37,11 +53,9 @@ const ConsumerSchemaModel = new mongoose.Schema(
         role: {
             type: String,
             default: 'consumer',
-            enum: ['consumer'],
             select: false
         },
 
-        // Details
         firstName: {
             type: String,
         },
@@ -62,7 +76,7 @@ const ConsumerSchemaModel = new mongoose.Schema(
             },
             url: {
                 type: String,
-                DEFAULT: 'https://www.computerhope.com/jargon/r/random-dice.png'
+                default: 'https://www.computerhope.com/jargon/r/random-dice.png'
             }
         },
         gender: {
@@ -94,7 +108,19 @@ const ConsumerSchemaModel = new mongoose.Schema(
             type: { type: String },
             coordinates: [Number]
         },
+        socialLinks: [
+            {
+                platform: String,
+                link: String
+            }
+        ],
 
+        deviceId: {
+            type: String,
+        },
+        fcmToken: {
+            type: String,
+        },
         // Passwords
         password: {
             type: String,
@@ -136,19 +162,20 @@ const ConsumerSchemaModel = new mongoose.Schema(
 );
 
 // Add a 2dSphere index on the location field
-ConsumerSchemaModel.index({ location: '2dsphere' });
+UserSchemaModel.index({ location: '2dsphere' });
 
-ConsumerSchemaModel.pre('save', async function (next) {
+
+UserSchemaModel.pre('save', async function (next) {
     if (!this.isModified('password')) return next()
     this.password = await bcrypt.hash(this.password, 12)
     next()
 });
 
-ConsumerSchemaModel.methods.correctPassword = async function (candidatePassword, userPassword) {
+UserSchemaModel.methods.correctPassword = async function (candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword)
 };
 
-ConsumerSchemaModel.methods.getResetPasswordToken = async function () {
+UserSchemaModel.methods.getResetPasswordToken = async function () {
     // 1) generate token
     const resetToken = crypto.randomBytes(20).toString("hex");
     // 2) generate hash token and add to db
@@ -157,5 +184,5 @@ ConsumerSchemaModel.methods.getResetPasswordToken = async function () {
     return resetToken;
 }
 
-const Consumer = mongoose.model('Consumer', ConsumerSchemaModel);
-export default Consumer;
+const Users = mongoose.model('Users', UserSchemaModel);
+export default Users;

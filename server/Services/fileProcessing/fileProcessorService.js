@@ -1,9 +1,9 @@
-import  path from 'path';
-import videoProcessingService from "./VideoProcessingService";
-import imageProcessingService from "./ImageProcessingService";
+const path = require('path');
+const videoProcessingService = require("./VideoProcessingService");
+const imageProcessingService = require("./ImageProcessingService");
 
-// File Service
-const file_Processing_Service = async (files, folder, user, useType = 'poster') => {
+
+const file_Processing_Service = async (files, folder, user) => {
   let images = [];
   let videos = [];
 
@@ -80,24 +80,7 @@ const file_Processing_Service = async (files, folder, user, useType = 'poster') 
 
   // Checking if Images are there
   if (images.length > 0) {
-    let height = 1200;
-    let width = 1500;
-    switch(useType){
-      case 'profile':
-        height = 800;
-        width = 800;
-        break;
-      
-      case 'cover':
-        height = 800;
-        width = 1500;
-      
-      default:
-        height = 1200;
-        width = 1500;
-
-    }
-    const processedImage = await imageProcessingService(images, folder, height, width);
+    const processedImage = await imageProcessingService(images, folder);
     if (!processedImage.success) {
       return processedImage;
     } else {
@@ -141,4 +124,4 @@ const file_Processing_Service = async (files, folder, user, useType = 'poster') 
   return fileProcessorResponse;
 };
 
-export default file_Processing_Service;
+module.exports = file_Processing_Service;

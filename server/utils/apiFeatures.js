@@ -11,6 +11,21 @@ class ApiFeatures {
         return this
     }
 
+    // Search feature
+    feedPostSearch() {
+        const post = this.queryStr.post ? { "eventPost.postTitle": { $regex: this.queryStr.post, $options: "i", } } : {};
+        console.log(post)
+        this.query = this.query.find({ ...post })
+        return this
+    }
+
+    // Followers and Followings Filter
+    followerFollowingFilter() {
+        const username = this.query.user ? { username: { $regex: this.queryStr.user, $options: "i", } } : {};
+        this.query = this.query.find({ ...username });
+        return this;
+    }
+
     // Filter
     filter() {
         // Creating copy of QueryStr Object
@@ -43,27 +58,27 @@ class ApiFeatures {
     // Search feature
     List_Data_Search() {
         const filterOptions = Object.entries(this.queryStr)
-        for(let i=0; i<filterOptions.length; i++){
-            if(filterOptions[i][0] === 'uenm' && filterOptions[i][1]){
+        for (let i = 0; i < filterOptions.length; i++) {
+            if (filterOptions[i][0] === 'uenm' && filterOptions[i][1]) {
                 let filterData = this.queryStr.uenm.toLowerCase();
-                let matchedUsers = this.query.filter((data)=>{
-                    if(data.username){
+                let matchedUsers = this.query.filter((data) => {
+                    if (data.username) {
                         const tempFilteredData = data.username.toLowerCase();
                         let isIncludes = tempFilteredData.includes(filterData)
-                        if(isIncludes){
+                        if (isIncludes) {
                             return data
                         }
                     }
                 })
                 this.query = matchedUsers
             }
-            if(filterOptions[i][0] === 'fnnm' && filterOptions[i][1]){
+            if (filterOptions[i][0] === 'fnnm' && filterOptions[i][1]) {
                 let filterData = this.queryStr.fnnm.toLowerCase();
-                let matchedUsers = this.query.filter((data)=>{
-                    if(data.firstname){
+                let matchedUsers = this.query.filter((data) => {
+                    if (data.firstname) {
                         const tempFilteredData = data.firstname.toLowerCase();
                         let isIncludes = tempFilteredData.includes(filterData)
-                        if(isIncludes){
+                        if (isIncludes) {
                             return data
                         }
                     }
@@ -75,4 +90,4 @@ class ApiFeatures {
     }
 }
 
-export default ApiFeatures;
+module.exports = ApiFeatures;

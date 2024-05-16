@@ -1,5 +1,7 @@
-export const allPostFilterAndRestructure = (posts, user) => {
 
+exports.allPostFilterAndRestructure = (posts, user) => {
+
+    console.log(user)
     let result = posts.map((data) => {
 
         // Default Structure
@@ -25,30 +27,30 @@ export const allPostFilterAndRestructure = (posts, user) => {
         }
 
         // Post Owner Type Check
-        if (data.ownerType === 'user') {
-            responseObj.authorName = data.postOwner.userAccount.firstname.charAt(0).toUpperCase() + data.postOwner.userAccount.firstname.slice(1) + " " + data.postOwner.userAccount.lastname.charAt(0).toUpperCase() + data.postOwner.userAccount.lastname.slice(1) || 'No Name';
-            responseObj.profilePicture = {
-                name: data.postOwner.userAccount.profilePicture.name,
-                public_id: data.postOwner.userAccount.profilePicture.public_id,
-                url: data.postOwner.userAccount.profilePicture.url
-            }
-        } else if (data.ownerType === 'business') {
+        if (data.ownerType === 'business' && data.postOwner.hasBusiness) {
             responseObj.authorName = data.postOwner.businessAccount.name ? data.postOwner.businessAccount.name.charAt(0).toUpperCase() + data.postOwner.businessAccount.name.slice(1) : 'No Name';
             responseObj.profilePicture = {
                 name: data.postOwner.businessAccount.profilePicture.name,
                 public_id: data.postOwner.businessAccount.profilePicture.public_id,
                 url: data.postOwner.businessAccount.profilePicture.url
             }
+        } else if (data.ownerType === 'customer') {
+            responseObj.authorName = data.postOwner.userAccount.firstname.charAt(0).toUpperCase() + data.postOwner.userAccount.firstname.slice(1) + " " + data.postOwner.userAccount.lastname.charAt(0).toUpperCase() + data.postOwner.userAccount.lastname.slice(1) || 'No Name';
+            responseObj.profilePicture = {
+                name: data.postOwner.userAccount.profilePicture.name,
+                public_id: data.postOwner.userAccount.profilePicture.public_id,
+                url: data.postOwner.userAccount.profilePicture.url
+            }
         }
 
         // Post Filter Based on Post Type
-        if (data.postType === 'normal') {
+        if (data.normalPost && data.postType === 'normal') {
             responseObj.event = undefined;
             responseObj.survey = undefined;
             responseObj.poll = undefined;
             responseObj.title = data.normalPost.postTitle;
             responseObj.summary = data.normalPost.postSummary;
-            responseObj.post.postImages = data.normalPost.postImages;
+            responseObj.post.postAssets = data.normalPost.postAssets;
             responseObj.post.likeAllowed = data.likeAllowed;
             responseObj.post.commentAllowed = data.commentAllowed;
             responseObj.post.liked = data.likeAllowed ? false : undefined;
@@ -64,32 +66,36 @@ export const allPostFilterAndRestructure = (posts, user) => {
                 responseObj.post.likeCount = data.userLikes.count
             }
 
-        } else if (data.postType === "event") {
-            responseObj.event.eventType = data.eventPost.eventType;
+        } else if (data.eventPost && data.postType === "event") {
             responseObj.title = data.eventPost.postTitle;
             responseObj.summary = data.eventPost.postSummary;
-            responseObj.event.eventImages = data.eventPost.postImages;
+            responseObj.event.eventType = data.eventPost.eventType;
+            responseObj.event.eventID = data.eventPost.eventUniqueID;
+            responseObj.event.postAssets = data.eventPost.postAssets;
             responseObj.event.startDate = data.eventPost.startDate;
             responseObj.event.startTime = data.eventPost.startTime;
             responseObj.event.endDate = data.eventPost.endDate;
             responseObj.event.endTime = data.eventPost.endTime;
             responseObj.event.moreInformation = data.eventPost.moreInformation
             responseObj.event.eventLink = data.eventPost.eventLink ? data.eventPost.eventLink : undefined;
-            responseObj.event.joinedCount = data.eventPost.sharedWith.length;
+            responseObj.event.joinedCount = data?.privateMembers.length || 0;
+            responseObj.post = undefined;
+            responseObj.survey = undefined;
+            responseObj.poll = undefined;
 
             // Shaded With  Fields If Not Provided By User
-            if (data?.eventPost?.sharedWith) {
-                let Joined = data.eventPost.sharedWith.includes(userID)
+            if (data.privateMembers) {
+                let Joined = data.privateMembers.includes(user)
                 responseObj.event.joined = Joined;
             }
 
-        } else if (data.postType === 'survey') {
+        } else if (data.surveyPost && data.postType === 'survey') {
             responseObj.post = undefined;
             responseObj.event = undefined;
             responseObj.poll = undefined;
             responseObj.title = data.surveyPost.postTitle;
             responseObj.summary = data.surveyPost.postSummary;
-            responseObj.survey.postImages = data.surveyPost.postImages;
+            responseObj.survey.postAssets = data.surveyPost.postAssets;
             responseObj.survey.startDate = data.surveyPost.startDate;
             responseObj.survey.endDate = data.surveyPost.endDate;
             responseObj.survey.likeCount = 0;
@@ -107,13 +113,13 @@ export const allPostFilterAndRestructure = (posts, user) => {
                 }
                 return temp;
             })
-        } else if (data.postType === 'poll') {
+        } else if (data.surveyPost && data.postType === 'poll') {
             responseObj.post = undefined;
             responseObj.event = undefined;
             responseObj.survey = undefined;
             responseObj.title = data.surveyPost.postTitle;
             responseObj.summary = data.surveyPost.postSummary;
-            responseObj.poll.postImages = data.surveyPost.postImages;
+            responseObj.poll.postAssets = data.surveyPost.postAssets;
             responseObj.poll.startDate = data.surveyPost.startDate;
             responseObj.poll.endDate = data.surveyPost.endDate;
             responseObj.poll.likeCount = 0;
@@ -131,6 +137,27 @@ export const allPostFilterAndRestructure = (posts, user) => {
                 }
                 return temp;
             })
+        } else {
+            responseObj.post = undefined;
+            responseObj.event = undefined;
+            responseObj.survey = undefined;
+            responseObj.poll = undefined;
+            switch (data.postType) {
+                case 'post':
+                    responseObj.post = {};
+                    break;
+                case 'event':
+                    responseObj.event = {};
+                    break;
+                case 'survey':
+                    responseObj.survey = {};
+                    break;
+                case 'poll':
+                    responseObj.poll = {};
+                    break;
+                default:
+                    null;
+            }
         }
         return responseObj;
     })
@@ -139,7 +166,7 @@ export const allPostFilterAndRestructure = (posts, user) => {
     return result;
 }
 
-export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
+exports.singlePostFilterAndRestructure = (singlePost, user = undefined) => {
 
     // Default Structure
     let result = {
@@ -164,7 +191,7 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
     }
 
     // Post Owner Type Check
-    if (singlePost.ownerType === 'user') {
+    if (singlePost.ownerType === 'customer') {
         result.authorName = singlePost.postOwner.userAccount.firstname.charAt(0).toUpperCase() + singlePost.postOwner.userAccount.firstname.slice(1) + " " + singlePost.postOwner.userAccount.lastname.charAt(0).toUpperCase() + singlePost.postOwner.userAccount.lastname.slice(1) || 'No Name';
         result.profilePicture = {
             name: singlePost.postOwner.userAccount.profilePicture.name,
@@ -187,7 +214,7 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
         result.poll = undefined;
         result.title = singlePost.normalPost.postTitle;
         result.summary = singlePost.normalPost.postSummary;
-        result.post.postImages = singlePost.normalPost.postImages;
+        result.post.postAssets = singlePost.normalPost.postAssets;
         result.post.likeAllowed = singlePost.likeAllowed;
         result.post.commentAllowed = singlePost.commentAllowed;
         result.post.liked = singlePost.likeAllowed ? false : undefined;
@@ -201,13 +228,13 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
             result.post.likeCount = 0
         } else if (singlePost.likeAllowed && singlePost.userLikes.count > 1) {
             result.post.likeCount = singlePost.userLikes.count
-        } 
+        }
 
     } else if (singlePost.postType === "event") {
         result.event.eventType = singlePost.eventPost.eventType;
         result.title = singlePost.eventPost.postTitle;
         result.summary = singlePost.eventPost.postSummary;
-        result.event.eventImages = singlePost.eventPost.postImages;
+        result.event.postAssets = singlePost.eventPost.postAssets;
         result.event.startDate = singlePost.eventPost.startDate;
         result.event.startTime = singlePost.eventPost.startTime;
         result.event.endDate = singlePost.eventPost.endDate;
@@ -217,9 +244,9 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
         result.event.joinedCount = singlePost.eventPost.sharedWith.length;
 
         // Shaded With  Fields If Not Provided By User
-        if (data?.eventPost?.sharedWith) {
-            let Joined = singlePost.eventPost.sharedWith.includes(userID)
-            result.event.joined = Joined;
+        if (singlePost.privateMembers) {
+            let Joined = singlePost.privateMembers.includes(user)
+            responseObj.event.joined = Joined;
         }
 
     } else if (singlePost.postType === 'survey') {
@@ -228,7 +255,7 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
         responseObj.poll = undefined;
         responseObj.title = singlePost.surveyPost.postTitle;
         responseObj.summary = singlePost.surveyPost.postSummary;
-        responseObj.survey.postImages = singlePost.surveyPost.postImages;
+        responseObj.survey.postAssets = singlePost.surveyPost.postAssets;
         responseObj.survey.startDate = singlePost.surveyPost.startDate;
         responseObj.survey.endDate = singlePost.surveyPost.endDate;
         responseObj.survey.likeCount = 0;
@@ -252,7 +279,7 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
         responseObj.survey = undefined;
         responseObj.title = singlePost.surveyPost.postTitle;
         responseObj.summary = singlePost.surveyPost.postSummary;
-        responseObj.poll.postImages = singlePost.surveyPost.postImages;
+        responseObj.poll.postAssets = singlePost.surveyPost.postAssets;
         responseObj.poll.startDate = singlePost.surveyPost.startDate;
         responseObj.poll.endDate = singlePost.surveyPost.endDate;
         responseObj.poll.likeCount = 0;
@@ -276,7 +303,7 @@ export const singlePostFilterAndRestructure = (singlePost, user=undefined) => {
     return result;
 }
 
-export const allEventFilterAndRestructure = (posts, userID) => {
+exports.allEventFilterAndRestructure = (posts, userID) => {
 
     let result = posts.map((data) => {
         // Default Structure
@@ -343,12 +370,12 @@ export const allEventFilterAndRestructure = (posts, userID) => {
     return result;
 }
 
-export const commentsFilterAndRestructure = (comments) => {
+exports.commentsFilterAndRestructure = (comments) => {
 
     let result = comments.map((comment) => {
-        console.log(comment)
         let responseObject = {
             _id: comment._id,
+            authorID: comment.user_id._id,
             name: "No Name",
             profilePicture: comment.user_id.userAccount.profilePicture || undefined,
             postID: comment.containerPost,
@@ -356,21 +383,22 @@ export const commentsFilterAndRestructure = (comments) => {
             dateOfComment: comment.createdAt,
             replies: []
         }
-        if(comment.user_id.role === 'customer'){
-            responseObject.name = comment.user_id.userAccount.firstname.charAt(0).toUpperCase() +comment.user_id.userAccount.firstname.slice(1) + " " + comment.user_id.userAccount.lastname.charAt(0).toUpperCase() +comment.user_id.userAccount.lastname.slice(1)
+        if (comment.user_id.role === 'customer') {
+            responseObject.name = comment.user_id.userAccount.firstname.charAt(0).toUpperCase() + comment.user_id.userAccount.firstname.slice(1) + " " + comment.user_id.userAccount.lastname.charAt(0).toUpperCase() + comment.user_id.userAccount.lastname.slice(1)
         }
-        if(comment.replies && comment.replies.length>0){
-            responseObject.replies = comment.replies.map((reply)=>{
+        if (comment.replies && comment.replies.length > 0) {
+            responseObject.replies = comment.replies.map((reply) => {
                 let temp = {
                     _id: reply._id,
+                    authorID: reply.user_id._id,
                     name: "No Name",
                     profilePicture: reply.user_id.userAccount.profilePicture || undefined,
                     commentID: reply.comment,
                     content: reply.content,
                     dateOfReply: reply.createdAt,
                 }
-                if(reply.user_id.role === 'customer'){
-                    temp.name = reply.user_id.userAccount.firstname.charAt(0).toUpperCase() +reply.user_id.userAccount.firstname.slice(1) + " " + reply.user_id.userAccount.lastname.charAt(0).toUpperCase() +reply.user_id.userAccount.lastname.slice(1)
+                if (reply.user_id.role === 'customer') {
+                    temp.name = reply.user_id.userAccount.firstname.charAt(0).toUpperCase() + reply.user_id.userAccount.firstname.slice(1) + " " + reply.user_id.userAccount.lastname.charAt(0).toUpperCase() + reply.user_id.userAccount.lastname.slice(1)
                 }
                 return temp
             })
@@ -378,4 +406,56 @@ export const commentsFilterAndRestructure = (comments) => {
         return responseObject;
     })
     return result;
+}
+
+exports.likesFilterAndRestructure = (likes, followings) => {
+
+    const responseData = likes.map((data) => {
+
+        // Temp response object
+        let responseObject = {
+            userID: data.user._id,
+            username: data.user.username,
+            name: undefined,
+            profilePicture: undefined,
+            likedOn: data.createdAt,
+            isFollowing: false,
+        }
+        // Checking user account
+        if (data.user.role === 'customer') {
+            responseObject.name = data.user.userAccount.firstname.charAt(0).toUpperCase() + data.user.userAccount.firstname.slice(1) + " " + data.user.userAccount.lastname.charAt(0).toUpperCase() + data.user.userAccount.lastname.slice(1);
+            responseObject.profilePicture = data.user.userAccount.profilePicture
+        }
+
+        // Checking if followed or not
+        let isFollowed = false;
+        for (let i in followings) {
+            let tempCheck = followings[i].followedToUser.toString().toLowerCase() === data.user._id.toString().toLowerCase()
+            if (tempCheck) {
+                isFollowed = tempCheck;
+            }
+        }
+        responseObject.isFollowing = isFollowed;
+        return responseObject
+    })
+
+    // Sending Final Data
+    return responseData;
+}
+
+exports.filterUserReportedPostData = (reports) => {
+
+    userReports = reports.map((data)=>{
+        let formattedData = {
+            _id: data._id,
+            userId: data.user._id,
+            username: data.user.username,
+            name: data.user.userAccount.firstname.charAt(0).toUpperCase() + data.user.userAccount.firstname.slice(1) +" "+ data.user.userAccount.lastname.charAt(0).toUpperCase() + data.user.userAccount.lastname.slice(1),
+            profilePicture: data.user.userAccount?.profilePicture? data.user.userAccount?.profilePicture : '',
+            reportReason: data.reportReason,
+            dateOfReport: data.updatedAt
+        }
+        return formattedData
+    })
+    return userReports
 }

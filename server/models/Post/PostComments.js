@@ -1,10 +1,10 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const PostCommentsSchema = new mongoose.Schema(
     {
-        containerPost: {
+        postDataContainer: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'ContainerPost',
+            ref: 'PostDataContainer',
             required: true
         },
         content: {
@@ -13,7 +13,7 @@ const PostCommentsSchema = new mongoose.Schema(
         },
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Consumer',
+            ref: 'Users',
             required: true
         }
     },

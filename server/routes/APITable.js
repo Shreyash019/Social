@@ -1,10 +1,12 @@
 import express from "express";
-import consumerAccountRoute from "./Consumer/consumerAccountRoute.js";
-import postRoutes from './PostRoutes/postRoute.js';
+import user_Authentication_Routes from "./UserRoutes/userAuthRoutes.js";
+import user_Profile_Routes from "./UserRoutes/userAuthRoutes.js";
+import user_Follow_Routes from "./UserRoutes/userAuthRoutes.js";
 
 const router = express.Router();
 
-router.use("/consumer", consumerAccountRoute);
-router.use("/feed", postRoutes);
+router.use("/user-auth", user_Authentication_Routes);
+router.use("/user-profile", user_Profile_Routes);
+router.use("/user-follow", user_Follow_Routes);
 
 export default router;

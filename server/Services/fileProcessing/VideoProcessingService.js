@@ -1,9 +1,6 @@
-import { v2 as cloudinary } from 'cloudinary';
-import ffmpeg from 'fluent-ffmpeg';
-import fs from 'fs';
-import path from 'path';
-ffmpeg.setFfmpegPath('C:\\ffmpeg-2024-03-11-git-3d1860ec8d-full_build\\bin\\ffmpeg.exe');
-ffmpeg.setFfprobePath('C:\\ffmpeg-2024-03-11-git-3d1860ec8d-full_build\\bin\\ffprobe.exe');
+const cloudinary = require("cloudinary").v2;
+const fs = require('fs');
+const path = require('path');
 
 // Video Upload To Cloud Service
 const cloud_Video_Uploader = async (files, folder = 'eventsZar') => {
@@ -37,86 +34,30 @@ const cloud_Video_Uploader = async (files, folder = 'eventsZar') => {
     }
 }
 
-// Function For Getting Video Dimensions
-const getVideoDimensions = async (videoUrl) => {
-    return new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(videoUrl, (err, metadata) => {
-            if (err) {
-                reject(err);
-            } else {
-                const width = metadata.streams[0].width;
-                const height = metadata.streams[0].height;
-                resolve({ width, height });
-            }
-        });
-    });
-};
-
-// Function For Getting  Video Duration
-const getVideoDuration = (videoUrl) => {
-    return new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(videoUrl, (err, metadata) => {
-            if (err) {
-                reject(err);
-            } else {
-                const durationInSeconds = metadata.format.duration;
-                resolve(durationInSeconds);
-            }
-        });
-    });
-};
-
 // Function For Generating Thumbnail For Video
-const cloud_Thumbnail_Generator = async (videoUrl, folder = 'eventsZar', user = 'temporary', timeFrame = 1) => {
+const cloud_Thumbnail_Generator = async (videoUrl, folder = 'eventsZar', user = 'temporary', width = 200, height = 500) => {
     try {
-
-        // Get video dimensions
-        const { width, height } = await getVideoDimensions(videoUrl);
-        // Fetch video duration
-        const videoDuration = await getVideoDuration(videoUrl);
-
-        // Calculate the time offset for the video duration
-        const timeOffset = timeFrame !== 1 ? timeFrame : videoDuration ? videoDuration * 0.5 : 1;
-
-        // Define output folder for the thumbnail
-        const outputFolder = path.resolve(__dirname, 'public');
-
-        // Ensure that the output folder exists
-        if (!fs.existsSync(outputFolder)) {
-            fs.mkdirSync(outputFolder, { recursive: true });
-        }
-
-        const thumbnailPath = path.join(outputFolder, `${user}.png`);
-
-        const thumbnailBuffer = await new Promise((resolve, reject) => {
-            ffmpeg(videoUrl)
-                .on('end', () => resolve())
-                .on('error', (err) => reject(err))
-                .inputOptions('-ss', timeOffset) // Seek to the 10% frame
-                .outputOptions(['-vframes 1', '-vf', `scale=${width}:${height}`])
-                .output(thumbnailPath)
-                .run();
+        // Upload video to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(videoUrl, {
+            folder: folder,
+            resource_type: 'video',
+            eager: [
+                { width: 300, height: 500, crop: 'fill', format: 'png' } // Specify desired thumbnail dimensions and format
+            ]
         });
 
-        // Upload thumbnail to Cloudinary
-        const uploadResult = await cloudinary.uploader.upload(thumbnailPath, {
-            folder: folder
-        });
+        // Extract URL and public ID of the generated thumbnail
+        const thumbnailUrl = uploadResult.eager[0].secure_url;
+        const thumbnailPublicId = uploadResult.eager[0].public_id;
 
-        // Extract URL and public ID from the upload result
-        const thumbnailUrl = uploadResult.secure_url;
-        const thumbnailPublicId = uploadResult.public_id;
-
-        // Delete local thumbnail file after successful upload
-        fs.unlinkSync(thumbnailPath);
-
-
-        // Return the URL and public ID of the uploaded thumbnail
+        // Return the URL and public ID of the generated thumbnail
         return { url: thumbnailUrl, public_id: thumbnailPublicId };
     } catch (error) {
+        console.log(error);
         return null;
     }
 }
+
 
 // Function For Processing Single Video
 async function processVideo(video, folder = 'eventsZar', user = 'temporary') {
@@ -160,4 +101,4 @@ const videoProcessingService = async (files, folder, user = 'temporary') => {
     }
 }
 
-export default videoProcessingService;
+module.exports = videoProcessingService;

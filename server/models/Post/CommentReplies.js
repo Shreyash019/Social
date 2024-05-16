@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const CommentRepliesSchema = new mongoose.Schema(
     {
@@ -13,7 +13,7 @@ const CommentRepliesSchema = new mongoose.Schema(
         },
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Consumer',
+            ref: 'Users',
             required: true
         }
     },

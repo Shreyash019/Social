@@ -1,4 +1,4 @@
-const HttpStatusCode = {
+export const HttpStatusCode = {
     CONTINUE: 100,
 
     SUCCESS: 200,
@@ -24,4 +24,3 @@ const HttpStatusCode = {
     SERVICE_UNAVAILABLE: 503
   };
   
- export default HttpStatusCode;

@@ -14,6 +14,7 @@ const PostDataContainerSchema = new mongoose.Schema(
     },
     postType: {
       type: String,
+      default: "general",
       enum: ["general", "event", "survey", "poll"],
       required: true,
     },

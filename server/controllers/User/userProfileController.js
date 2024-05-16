@@ -4,7 +4,6 @@ import LocationService from '../../Services/locationService';
 import CatchAsync from "../../error/catchAsync";
 import ErrorHandler from "../../utils/errorHandler";
 import { HttpStatusCode } from "../../enums/httpHeaders";
-import eventZar_Response from "../../utils/responses";
 import FileProcessor from '../../Services/fileProcessing/fileProcessorService';
 
 /* 

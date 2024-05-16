@@ -1,149 +1,39 @@
-const Users = require('../../../models/User/Users');
-const ContainerPost = require('../../../models/Post/ContainerPost');
-const NormalPost = require('../../../models/Post/NormalPost');
-const EventPosts = require('../../../models/Post/EventPost')
-const UserGroups = require('../../../models/Groups/UserGroups');
-const PostLikes = require('../../../models/Post/PostLikes');
-const SurveyPost = require('../../../models/Post/SurveyPost');
-const Questions = require('../../../models/Post/Questions');
-const Country = require('../../../models/Country/Country')
-const CountryCategories = require('../../../models/Category/CountryCategories');
-const BookMarkedPosts = require('../../../models/Post/QueriesAndReports/BookMarkedPosts');
-const LocationService = require('../../../Services/locationService');
-const APIFeatures = require('../../../utils/apiFeatures');
-const ErrorHandler = require('../../../utils/errorHandler');
-const { HttpStatusCode } = require('../../../enums/httpHeaders');
-const { UtilsKeywords } = require('../../../enums/utilsEnum');
-const CatchAsync = require('../../../error/catchAsync');
-const responseMSG = require('../../../utils/responses');
-const FileProcessor = require('../../../Services/fileProcessing/fileProcessorService');
-const { convertStringToDateTime, generateEventUniqueID } = require('../../../Services/TimeFormatService');
-const { PostFilteringAndRestructuring } = require('../../../Services/PostResponses/postResponses');
+import Users from '../../../models/User/Users';
+import PostDataContainer from '../../../models/Post/PostDataContainer';
+import EventDataContainer from '../../../models/Post/EventDataContainer'
+import PostLikes from '../../../models/Post/PostLikes';
+import Questions from '../../../models/Post/Questions';
+import BookMarkedPosts from '../../../models/Post/QueriesAndReports/BookMarkedPosts';
+import LocationService from '../../../Services/locationService';
+import APIFeatures from '../../../utils/apiFeatures';
+import ErrorHandler from '../../../utils/errorHandler';
+import { HttpStatusCode } from '../../../enums/httpHeaders';
+import { UtilsKeywords } from '../../../enums/utilsEnum';
+import CatchAsync from '../../../error/catchAsync';
+import responseMSG from '../../../utils/responses';
+import FileProcessor from '../../../Services/fileProcessing/fileProcessorService';
+import { convertStringToDateTime, generateEventUniqueID } from '../../../Services/TimeFormatService';
+import { PostFilteringAndRestructuring } from '../../../Services/PostResponses/postResponses';
 
 /*
     Index:
-        01) ⛈️ User post categories
-        02) 🔥 (GENERAL) User New Post
-        03) 🔥 (EVENT) User New Post
+        02) 🔥 User New Post
+        03) 🔥 User New Post Event
         04) ⛈️ (GENERAL) Users Public Posts
         05) ⛈️ (GENERAL) Users Private Posts
         06) ⛈️ (Event) Users Public Posts
         07) ⛈️ (Event) Users Private Posts
 */
 
-// 🅿️⛈️✅ 01) ---- USER's POST CATEGORY ----
-exports.eventZAR_User_Account_All_Post_Category = CatchAsync(async (req, res, next) => {
-
-    // Fetching user current country
-    let userCountry = req.user.country ?? 'world';
-
-    // Fetching User Details
-    const user = await Users.findById({ _id: req.user.id })
-        .select("userAccount")
-        .populate({
-            path: 'userAccount',
-            select: `country gender`
-        })
-        .catch((err) => console.log(err));
-
-
-    if (!user) {
-        return next(new ErrorHandler(`Please login again`, HttpStatusCode.UNAUTHORIZED))
-    }
-
-    // Checking if user profile is updated or not
-    if (!user.userAccount?.country) {
-        return next(new ErrorHandler(`Please update your profile and address first`, HttpStatusCode.UNPROCESSABLE_ENTITY))
-    }
-
-    // Fetching Country 
-    const isCountry = await Country.findOne({ countryName: new RegExp(userCountry, 'i') })
-
-    // Fetching the data from the database
-    const categories = await CountryCategories.findOne({ country: isCountry._id })
-        .populate({
-            path: 'categories.category'
-        })
-        .populate({
-            path: 'categories.subCategories'
-        })
-
-    if (!categories) {
-        return next(new ErrorHandler(`No category found in your country! Please contact with admin.`, HttpStatusCode.NOT_FOUND))
-    }
-    // Making a filter to get only the required fields of the
-    const responseCategories = []
-    categories.categories.forEach((data) => {
-        if (user.userAccount?.gender) {
-            if (data.category.categoryGender.toLowerCase() === user.userAccount.gender.toLowerCase()) {
-                let categoryTemp = {
-                    _id: data.category._id,
-                    icon: data.category.categoryIcon,
-                    name: data.category.categoryName,
-                    subcategories: []
-                }
-                if (data.subCategories.length > 0) {
-                    let subCategoryTemp = data.subCategories.map((sData) => {
-                        let temp = {
-                            _id: sData._id,
-                            subCategoryName: sData.subCategoryName
-                        }
-                        return temp
-                    })
-                    categoryTemp.subcategories = subCategoryTemp;
-                } else {
-                    categoryTemp.subcategories = 'No subcategories!'
-                }
-                responseCategories.push(categoryTemp);
-            }
-        }
-        else {
-            let categoryTemp = {
-                _id: data.category._id,
-                icon: data.category.categoryIcon,
-                name: data.category.categoryName,
-                subcategories: []
-            }
-            if (data.subCategories.length > 0) {
-                let subCategoryTemp = data.subCategories.map((sData) => {
-                    let temp = {
-                        _id: sData._id,
-                        subCategoryName: sData.subCategoryName
-                    }
-                    return temp
-                })
-                categoryTemp.subcategories = subCategoryTemp;
-            } else {
-                categoryTemp.subcategories = 'No subcategories!'
-            }
-            responseCategories.push(categoryTemp);
-        }
-    })
-
-    // Sending Response
-    responseMSG.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
-        success: true,
-        message: 'User post categories!',
-        categories: responseCategories.length > 0 ? responseCategories : 'There are no categories yet.'
-    })
-})
-
 // 🅿️🔥✅ 02) ---- (GENERAL) NEW PUBLIC POST ----
-exports.eventZAR_User_Account_New_General_Post = CatchAsync(async (req, res, next) => {
+export const social_Media_User_New_Post = CatchAsync(async (req, res, next) => {
 
     // Destructuring data
-    const { postCategory, postSubCategory, postTitle, postLocation, likeAllowed, commentAllowed } = req.body;
-    // const { postCategory, postSubCategory, postTitle, postLocation, likeAllowed, commentAllowed, showCount } = req.body;
+    const { postLocation, likeAllowed, commentAllowed } = req.body;
 
-    // Checking if all fields provided
-    if (!postCategory || !postSubCategory || !postTitle) {
-        return next(new ErrorHandler(`Please provide all required details!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-    }
     // Checking for location details
-    if (typeof postLocation !== 'boolean' && typeof postLocation !== 'string') {
+    if (!postLocation && !postLocation.latitude && !postLocation.longitude) {
         return next(new ErrorHandler(`Please provide correct details!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-    } else if (typeof postLocation === 'string' && !['true', 'false'].includes(postLocation.toLowerCase())) {
-        return next(new ErrorHandler(`Please provide current location!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
     }
     // Checking for if like allowed or not
     if (typeof likeAllowed !== 'boolean' && typeof likeAllowed !== 'string') {
@@ -158,46 +48,19 @@ exports.eventZAR_User_Account_New_General_Post = CatchAsync(async (req, res, nex
         return next(new ErrorHandler(`Provide details whether comment allowed or not!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
     }
 
-    // Check For Post Title and summary
-    if (req.body.postTitle && req.body.postTitle.length > 70) {
-        return next(new ErrorHandler(`Title should not be more than 70 character long!`, HttpStatusCode.UNPROCESSABLE_ENTITY))
-    }
     if (req.body.postSummary && req.body.postSummary.length > 800) {
         return next(new ErrorHandler(`Summary should not be more than 800 character long!`, HttpStatusCode.UNPROCESSABLE_ENTITY))
     }
 
-    // Checking for private post
-    let groupExist = undefined;
-    if (req.body.groupID) {
-        try {
-            const isGroup = await UserGroups.findById({ _id: req.body.groupID });
-            if (!isGroup) {
-                return next(new ErrorHandler(`Tagged group not found`, HttpStatusCode.NOT_FOUND));
-            } else {
-                groupExist = isGroup;
-            }
-        } catch (err) {
-            return next(new ErrorHandler(`Tagged group not found`, HttpStatusCode.NOT_FOUND));
-        }
-    }
-
     // Checking location service
-    if (typeof req.body.postLocation === 'string' && req.body.postLocation.toLowerCase() === 'true' || req.body.postLocation === true) {
+    if (postLocation && postLocation.latitude && postLocation.longitude) {
 
-        if (req.body.coordinates) {
-            if (!Array.isArray(req.body.coordinates)) {
-                let geoData = req.body.coordinates.split(',');
-                req.body.coordinates = geoData;
-            }
-            if (!req.body.coordinates || !req.body.coordinates[0] || !req.body.coordinates[1]) return next(new ErrorHandler(`Please provide all required details!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-            const isLoc = await LocationService.get_Coordinates_Details(req.body.coordinates[0], req.body.coordinates[1])
-            if (!isLoc.country) return next(new ErrorHandler(`Something went wrong in location coordinates!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-            if (isLoc.address) req.body.address = isLoc.address.toLowerCase();
-            if (isLoc.city) req.body.city = isLoc.city.toLowerCase();
-            if (isLoc.latitude) req.body.latitude = isLoc.latitude;
-            if (isLoc.longitude) req.body.longitude = isLoc.longitude;
-            req.body.country = isLoc.country.toLowerCase();
-        }
+        const isLoc = await LocationService.get_Coordinates_Details(postLocation.latitude, postLocation.longitude)
+        if (!isLoc.country) return next(new ErrorHandler(`Something went wrong in location coordinates!`, HttpStatusCode.FORBIDDEN));
+        if (isLoc.address) req.body.address = isLoc.address.toLowerCase();
+        if (isLoc.city) req.body.city = isLoc.city.toLowerCase();
+        req.body.country = isLoc.country.toLowerCase();
+
     }
 
     // Checking for image and video
@@ -212,53 +75,34 @@ exports.eventZAR_User_Account_New_General_Post = CatchAsync(async (req, res, nex
     }
 
     // Creating new post
-    let newPost = await ContainerPost.create({
-        postOwner: req.user.id,
-        ownerType: "customer",
-        postType: 'normal',
-        postVisibility: req.body.groupID ? 'private' : 'public',
-        postCategory: req.body.postCategory.toLowerCase(),
-        postSubCategory: req.body.postSubCategory.toLowerCase(),
-        address: req.body.address || undefined,
-        city: req.body.city || undefined,
-        country: req.body.country || 'world',
-        likeAllowed: req.body.likeAllowed,
-        commentAllowed: req.body.commentAllowed,
-        taggedGroup: req.body.groupID ? groupExist._id : undefined,
-        privateMembers: req.body.groupID ? groupExist.groupMembers : undefined,
-        location: req.body.longitude && req.body.latitude ? { type: 'Point', coordinates: [req.body.longitude, req.body.latitude] } : { type: 'Point', coordinates: [0, 0] },
-        isPostActive: true
-    }).catch((err) => console.log(err));
-
-    // Catching error encounter 
-    if (!newPost) return next(new ErrorHandler(`Either post type or visibility input not provided!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-
-    // Create Post
-    let isPost = await NormalPost.create({
-        containerPost: newPost._id,
-        postTitle: req.body.postTitle.toLowerCase(),
-        postSummary: req.body.postSummary ? req.body.postSummary.toLowerCase() : undefined,
-        postAssets: postAssets.length > 0 ? postAssets : undefined
-    }).catch((err) => console.log(err.toString()));
-
-    if (!isPost) {
-        await ContainerPost.findByIdAndDelete({ _id: newPost._id })
-        return next(new ErrorHandler(`Something went wrong!`, HttpStatusCode.INTERNAL_SERVER_ERROR));
+    try{
+        await PostDataContainer.create({
+            postOwner: req.user.id,
+            postType: 'general',
+            postVisibility: req.body.postVisibility ?? 'public',
+            postSummary: req.body.postSummary ? req.body.postSummary.toLowerCase() : undefined,
+            postAssets: postAssets.length > 0 ? postAssets : undefined,
+            address: req.body.address || undefined,
+            city: req.body.city || undefined,
+            country: req.body.country ?? undefined,
+            likeAllowed: req.body.likeAllowed,
+            commentAllowed: req.body.commentAllowed,
+            location: req.body.longitude && req.body.latitude ? { type: 'Point', coordinates: [req.body.longitude, req.body.latitude] } : { type: 'Point', coordinates: [0, 0] },
+            isPostActive: true
+        })
+    } catch(error){
+        return next(new ErrorHandler(error.message, HttpStatusCode.INTERNAL_SERVER_ERROR));
     }
 
-    // Saving reference
-    newPost.normalPost = isPost._id;
-    await newPost.save();
-
     // Sending response
-    responseMSG.eventsZarGeneralResponse(req, res, HttpStatusCode.SUCCESS, {
+    res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         message: `Post created successfully!`
     });
 })
 
 // 🅿️🔥✅ 03) ---- (EVENT) USER NEW PUBLIC POST ----
-exports.eventZAR_User_Account_Event_New_Public_Post = CatchAsync(async (req, res, next) => {
+export const social_Media_User_New_Event_Creation = CatchAsync(async (req, res, next) => {
 
     // Destructuring the request body
     const { postCategory, postSubCategory, postTitle, postLocation, eventType, startDate, startTime, endDate, endTime } = req.body;
@@ -344,7 +188,7 @@ exports.eventZAR_User_Account_Event_New_Public_Post = CatchAsync(async (req, res
     const eventUniqueID = generateEventUniqueID('customer');
 
     // Creating new post
-    let newPost = await ContainerPost.create({
+    let newPost = await PostDataContainer.create({
         postOwner: req.user.id,
         ownerType: 'customer',
         postType: 'event',
@@ -365,9 +209,9 @@ exports.eventZAR_User_Account_Event_New_Public_Post = CatchAsync(async (req, res
     if (!newPost) return next(new ErrorHandler(`Either post type or visibility input not provided!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
 
     // Event Creation
-    let isPost = await EventPosts.create({
+    let isPost = await EventDataContainer.create({
         eventUniqueID: eventUniqueID,
-        containerPost: newPost._id,
+        PostDataContainer: newPost._id,
         eventType: req.body.eventType.toLowerCase(),
         postTitle: req.body.postTitle.toLowerCase(),
         postSummary: req.body.postSummary.toLowerCase(),
@@ -382,7 +226,7 @@ exports.eventZAR_User_Account_Event_New_Public_Post = CatchAsync(async (req, res
     }).catch((err) => console.log(err.toString()));
 
     if (!isPost) {
-        await ContainerPost.findByIdAndDelete({ _id: newPost._id });
+        await PostDataContainer.findByIdAndDelete({ _id: newPost._id });
         return next(new ErrorHandler(`The specified user group does not exist.`, HttpStatusCode.NOT_FOUND));
     }
 
@@ -398,12 +242,12 @@ exports.eventZAR_User_Account_Event_New_Public_Post = CatchAsync(async (req, res
 })
 
 // 🅱️🔥✅ 04) ---- (POLL) USER NEW PUBLIC POST ----
-exports.eventZAR_User_Account_Poll_New_Public_Post = CatchAsync(async (req, res, next) => {
+export const social_Media_User_New_Poll_Creation = CatchAsync(async (req, res, next) => {
 
     // Error Catcher
     let errorOccur = false;
     let createdPost = {
-        containerPost: undefined,
+        PostDataContainer: undefined,
         surveyPost: undefined,
         questionnaire: undefined
     }
@@ -542,7 +386,7 @@ exports.eventZAR_User_Account_Poll_New_Public_Post = CatchAsync(async (req, res,
     }
 
     try {
-        createdPost.containerPost = await ContainerPost.create(containerObject);
+        createdPost.PostDataContainer = await PostDataContainer.create(containerObject);
     } catch (error) {
         // Handle the error here
         errorOccur = true;
@@ -550,7 +394,7 @@ exports.eventZAR_User_Account_Poll_New_Public_Post = CatchAsync(async (req, res,
 
     // // Survey Object
     const surveyPost = {
-        containerPost: createdPost.containerPost._id,
+        PostDataContainer: createdPost.PostDataContainer._id,
         postTitle: undefined,
         // postTitle: req.body.postTitle.toLowerCase(),
         postSummary: undefined,
@@ -585,8 +429,8 @@ exports.eventZAR_User_Account_Poll_New_Public_Post = CatchAsync(async (req, res,
 
     // Saving each other references
     if (errorOccur) {
-        if (createdPost.containerPost) {
-            await ContainerPost.findByIdAndDelete({ _id: createdPost.containerPost._id })
+        if (createdPost.PostDataContainer) {
+            await PostDataContainer.findByIdAndDelete({ _id: createdPost.PostDataContainer._id })
         }
         if (createdPost.surveyPost) {
             await SurveyPost.findByIdAndDelete({ _id: createdPost.surveyPost._id })
@@ -598,8 +442,8 @@ exports.eventZAR_User_Account_Poll_New_Public_Post = CatchAsync(async (req, res,
     } else {
         createdPost.surveyPost.questions = createdPost.questionnaire._id;
         await createdPost.surveyPost.save();
-        createdPost.containerPost.surveyPost = createdPost.surveyPost._id;
-        await createdPost.containerPost.save();
+        createdPost.PostDataContainer.surveyPost = createdPost.surveyPost._id;
+        await createdPost.PostDataContainer.save();
     }
 
     // Sending Response
@@ -611,11 +455,11 @@ exports.eventZAR_User_Account_Poll_New_Public_Post = CatchAsync(async (req, res,
 })
 
 // 🅱️🔥✅ 05) ---- (SURVEY) BUSINESS NEW PUBLIC POST ----
-exports.eventZAR_User_Account_Survey_New_Public_Post = CatchAsync(async (req, res, next) => {
+export const social_Media_User_New_Survey_Creation = CatchAsync(async (req, res, next) => {
 
     // Error Catcher
     let errorOccur = false;
-    let createdPost = { containerPost: undefined, surveyPost: undefined, questionnaire: undefined }
+    let createdPost = { PostDataContainer: undefined, surveyPost: undefined, questionnaire: undefined }
     // Destructuring the request body
     const { postCategory, postSubCategory, postLocation, questions } = req.body;
 
@@ -753,7 +597,7 @@ exports.eventZAR_User_Account_Survey_New_Public_Post = CatchAsync(async (req, re
     }
 
     try {
-        createdPost.containerPost = await ContainerPost.create(containerObject);
+        createdPost.PostDataContainer = await PostDataContainer.create(containerObject);
     } catch (error) {
         // Handle the error here
         errorOccur = true;
@@ -761,7 +605,7 @@ exports.eventZAR_User_Account_Survey_New_Public_Post = CatchAsync(async (req, re
 
     // // Survey Object
     const surveyPost = {
-        containerPost: createdPost.containerPost._id,
+        PostDataContainer: createdPost.PostDataContainer._id,
         postTitle: undefined,
         // postTitle: req.body.postTitle.toLowerCase(),
         postSummary: undefined,
@@ -796,8 +640,8 @@ exports.eventZAR_User_Account_Survey_New_Public_Post = CatchAsync(async (req, re
 
     // Saving each other references
     if (errorOccur) {
-        if (createdPost.containerPost) {
-            await ContainerPost.findByIdAndDelete({ _id: createdPost.containerPost._id })
+        if (createdPost.PostDataContainer) {
+            await PostDataContainer.findByIdAndDelete({ _id: createdPost.PostDataContainer._id })
         }
         if (createdPost.surveyPost) {
             await SurveyPost.findByIdAndDelete({ _id: createdPost.surveyPost._id })
@@ -809,8 +653,8 @@ exports.eventZAR_User_Account_Survey_New_Public_Post = CatchAsync(async (req, re
     } else {
         createdPost.surveyPost.questions = createdPost.questionnaire._id;
         await createdPost.surveyPost.save();
-        createdPost.containerPost.surveyPost = createdPost.surveyPost._id;
-        await createdPost.containerPost.save();
+        createdPost.PostDataContainer.surveyPost = createdPost.surveyPost._id;
+        await createdPost.PostDataContainer.save();
     }
 
     // Sending Response
@@ -821,7 +665,7 @@ exports.eventZAR_User_Account_Survey_New_Public_Post = CatchAsync(async (req, re
 })
 
 // 🅿️⛈️✅ 06) ---- ALL USERS PUBLIC POSTS ----
-exports.eventZAR_User_Account_General_All_Public_Posts = CatchAsync(async (req, res, next) => {
+export const social_Media_All_Public_Posts = CatchAsync(async (req, res, next) => {
 
     // Fetching user current country
     let userCountry = req.user.country;
@@ -854,10 +698,10 @@ exports.eventZAR_User_Account_General_All_Public_Posts = CatchAsync(async (req, 
     }
 
     // Fetching  all my posts counts
-    const getCounts = await ContainerPost.countDocuments(postsQuery)
+    const getCounts = await PostDataContainer.countDocuments(postsQuery)
 
     // Fetching user post 
-    const apiFeature = new APIFeatures(ContainerPost.find(postsQuery)
+    const apiFeature = new APIFeatures(PostDataContainer.find(postsQuery)
         .select('+address')
         .populate('normalPost')
         .populate({
@@ -915,7 +759,7 @@ exports.eventZAR_User_Account_General_All_Public_Posts = CatchAsync(async (req, 
 })
 
 // 🅿️⛈️✅ 07) ---- ALL USERS PRIVATE POSTS ----
-exports.eventZAR_User_Account_General_All_Private_Posts = CatchAsync(async (req, res, next) => {
+export const social_Media_User_All_Private_Posts = CatchAsync(async (req, res, next) => {
 
     // Fetching user current country
     let userCountry = req.user.country;
@@ -962,13 +806,13 @@ exports.eventZAR_User_Account_General_All_Private_Posts = CatchAsync(async (req,
     }
 
     // Fetching  all my posts counts
-    const getCounts = await ContainerPost.countDocuments(postsQuery);
+    const getCounts = await PostDataContainer.countDocuments(postsQuery);
 
     // Pagination Query
     let pageLimit = req.query.pageLimit || UtilsKeywords.PAGE_LIMIT;
 
     // Fetching user post 
-    const apiFeature = new APIFeatures(ContainerPost.find(postsQuery)
+    const apiFeature = new APIFeatures(PostDataContainer.find(postsQuery)
         .select("+privateMembers")
         .populate('normalPost')
         .populate({
@@ -1031,7 +875,7 @@ exports.eventZAR_User_Account_General_All_Private_Posts = CatchAsync(async (req,
 })
 
 // 🅿️⛈️✅ 08) ---- All USER's PUBLIC EVENTs ----
-exports.eventZAR_User_Account_Event_All_Public_Events = CatchAsync(async (req, res, next) => {
+export const social_Media_User_All_Public_Events = CatchAsync(async (req, res, next) => {
 
     // Fetching user current country
     let userCountry = req.user.country;
@@ -1073,19 +917,19 @@ exports.eventZAR_User_Account_Event_All_Public_Events = CatchAsync(async (req, r
     // Fetch EventPost IDs based on search postTitle
     let eventPostIds = [];
     if (req.query.event) {
-        const eventPosts = await EventPosts.find({ postTitle: new RegExp(req.query.event, 'i') })
-            .select('containerPost')
+        const EventDataContainer = await EventDataContainer.find({ postTitle: new RegExp(req.query.event, 'i') })
+            .select('PostDataContainer')
             .limit(pageLimit) // Apply pagination as needed
             .exec();
-        eventPostIds = eventPosts.map(post => post.containerPost.toString());
+        eventPostIds = EventDataContainer.map(post => post.PostDataContainer.toString());
         postsQuery.$and.push({ _id: { $in: eventPostIds } })
     }
 
     // Fetching  all my posts counts
-    const getCounts = await ContainerPost.countDocuments(postsQuery);
+    const getCounts = await PostDataContainer.countDocuments(postsQuery);
 
     // Fetching user post 
-    const apiFeature = new APIFeatures(ContainerPost.find(postsQuery)
+    const apiFeature = new APIFeatures(PostDataContainer.find(postsQuery)
         .select("+address +privateMembers")
         .populate({
             path: 'eventPost',
@@ -1145,7 +989,7 @@ exports.eventZAR_User_Account_Event_All_Public_Events = CatchAsync(async (req, r
 })
 
 // 🅿️⛈️✅ 09) ---- All USER's PRIVATE EVENTs ----
-exports.eventZAR_User_Account_Event_All_Private_Events = CatchAsync(async (req, res, next) => {
+export const social_Media_User_All_Private_Events = CatchAsync(async (req, res, next) => {
 
     // Fetching user current country
     let userCountry = req.user.country;
@@ -1204,21 +1048,21 @@ exports.eventZAR_User_Account_Event_All_Private_Events = CatchAsync(async (req, 
     // Fetch EventPost IDs based on search postTitle
     let eventPostIds = [];
     if (req.query.event) {
-        const eventPosts = await EventPosts.find({ postTitle: new RegExp(req.query.event, 'i') })
-            .select('containerPost')
+        const EventDataContainer = await EventDataContainer.find({ postTitle: new RegExp(req.query.event, 'i') })
+            .select('PostDataContainer')
             .limit(pageLimit) // Apply pagination as needed
             .exec();
-        eventPostIds = eventPosts.map(post => post.containerPost.toString());
+        eventPostIds = EventDataContainer.map(post => post.PostDataContainer.toString());
         postsQuery.$or[0].$and.push({ _id: { $in: eventPostIds } })
         postsQuery.$or[1].$and.push({ _id: { $in: eventPostIds } })
     }
 
     // Fetching  all my posts counts
-    const getCounts = await ContainerPost.countDocuments(postsQuery);
+    const getCounts = await PostDataContainer.countDocuments(postsQuery);
 
 
     // Fetching user post 
-    const apiFeature = new APIFeatures(ContainerPost.find(postsQuery)
+    const apiFeature = new APIFeatures(PostDataContainer.find(postsQuery)
         .select("+address +privateMembers")
         .populate({
             path: 'eventPost',
@@ -1276,7 +1120,7 @@ exports.eventZAR_User_Account_Event_All_Private_Events = CatchAsync(async (req, 
 })
 
 // 🅿️🔥❌ 10) ---- New Post In a Event ----
-exports.eventZAR_New_Post_In_A_User_Created_Event = CatchAsync(async (req, res, next) => {
+export const social_Media_New_Post_In_A_Event = CatchAsync(async (req, res, next) => {
 
     // Destructuring data
     const { ownerType, eventID, postCategory, postSubCategory, postTitle, postLocation } = req.body;
@@ -1319,8 +1163,8 @@ exports.eventZAR_New_Post_In_A_User_Created_Event = CatchAsync(async (req, res, 
     }
 
     // Checking for an event existence
-    // const isEventExistAndOpen = await EventPosts.findOne({ eventUniqueID: eventID, endDate: { $gt: Date.now() }, endTime: { $gt: Date.now() } });
-    const isEventExistAndOpen = await EventPosts.findOne({ eventUniqueID: eventID, endTime: { $gt: Date.now() } });
+    // const isEventExistAndOpen = await EventDataContainer.findOne({ eventUniqueID: eventID, endDate: { $gt: Date.now() }, endTime: { $gt: Date.now() } });
+    const isEventExistAndOpen = await EventDataContainer.findOne({ eventUniqueID: eventID, endTime: { $gt: Date.now() } });
 
     if (!isEventExistAndOpen) {
         return next(new ErrorHandler(`Event is closed so no new post can be created!`, HttpStatusCode.BAD_REQUEST));
@@ -1354,7 +1198,7 @@ exports.eventZAR_New_Post_In_A_User_Created_Event = CatchAsync(async (req, res, 
     }
 
     // Creating new post
-    let newPost = await ContainerPost.create({
+    let newPost = await PostDataContainer.create({
         postOwner: req.user.id,
         ownerType: ownerType,
         postType: 'normal',
@@ -1376,14 +1220,14 @@ exports.eventZAR_New_Post_In_A_User_Created_Event = CatchAsync(async (req, res, 
 
     // Create Post
     let isPost = await NormalPost.create({
-        containerPost: newPost._id,
+        PostDataContainer: newPost._id,
         postTitle: req.body.postTitle.toLowerCase(),
         postSummary: req.body.postSummary ? req.body.postSummary.toLowerCase() : undefined,
         postAssets: postAssets.length > 0 ? postAssets : undefined
     }).catch((err) => console.log(err.toString()));
 
     if (!isPost) {
-        await ContainerPost.findByIdAndDelete({ _id: newPost._id })
+        await PostDataContainer.findByIdAndDelete({ _id: newPost._id })
         return next(new ErrorHandler(`Something went wrong!`, HttpStatusCode.INTERNAL_SERVER_ERROR));
     }
 
@@ -1399,7 +1243,7 @@ exports.eventZAR_New_Post_In_A_User_Created_Event = CatchAsync(async (req, res, 
 })
 
 // 🅿️⛈️❌ 11) ---- Fetch All Events Post ---- 
-exports.eventsZar_Fetch_All_Posts_Of_Event = CatchAsync(async (req, res, next) => {
+export const social_Media_Fetch_All_Posts_Of_Event = CatchAsync(async (req, res, next) => {
 
     // Fetching user current country
     const userCountry = req.user.country;
@@ -1431,10 +1275,10 @@ exports.eventsZar_Fetch_All_Posts_Of_Event = CatchAsync(async (req, res, next) =
     };
 
     // Fetching  all my posts counts
-    const getCounts = await ContainerPost.countDocuments(postsQuery)
+    const getCounts = await PostDataContainer.countDocuments(postsQuery)
 
     // Fetching user post 
-    const apiFeature = new APIFeatures(ContainerPost.find(postsQuery)
+    const apiFeature = new APIFeatures(PostDataContainer.find(postsQuery)
         .select("+address")
         .populate('normalPost')
         .populate({
@@ -1485,7 +1329,7 @@ exports.eventsZar_Fetch_All_Posts_Of_Event = CatchAsync(async (req, res, next) =
 });
 
 // 🅿️⛈️❌ 12) ---- Join A Event ----
-exports.eventsZar_Join_A_Event = CatchAsync(async (req, res, next) => {
+export const social_Media_Join_A_Public_Event = CatchAsync(async (req, res, next) => {
 
     // Checking for user
     if (!req.user.id) {
@@ -1493,7 +1337,7 @@ exports.eventsZar_Join_A_Event = CatchAsync(async (req, res, next) => {
     }
     const { id } = req.params;
 
-    const isEventExist = await ContainerPost.findOne({ _id: id })
+    const isEventExist = await PostDataContainer.findOne({ _id: id })
         .select("+privateMembers")
         .populate('eventPost');
 

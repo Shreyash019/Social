@@ -1,4 +1,4 @@
-const cloudinary = require("cloudinary").v2;
+import { v2 as cloudinary } from 'cloudinary';
 
 const image_Processing_Service = async (files, folder) => {
   try {
@@ -33,4 +33,4 @@ const image_Processing_Service = async (files, folder) => {
   }
 };
 
-module.exports = image_Processing_Service;
+export default image_Processing_Service;

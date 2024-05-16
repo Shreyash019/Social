@@ -1,12 +1,11 @@
 import OTPGenerator from "otp-generator";
-import Users from "../../models/User/Users";
-import UserActivityTracker from '../../models/User/UserActivityTracker';
-import CatchAsync from "../../error/catchAsync";
-import ErrorHandler from "../../utils/errorHandler";
-import authToken from "../../utils/authToken";
-import sendEmail from "../../utils/sendMails";
-import { HttpStatusCode } from "../../enums/httpHeaders";
-import eventZar_Response from "../../utils/responses";
+import Users from "../../models/User/Users.js";
+import UserActivityTracker from '../../models/User/UserActivityTracker.js';
+import CatchAsync from "../../error/catchAsync.js";
+import ErrorHandler from "../../utils/errorHandler.js";
+import authToken from "../../utils/authToken.js";
+import sendEmail from "../../utils/sendMails.js";
+import { HttpStatusCode } from "../../enums/httpHeaders.js";
 
 /* 
     Index: 

@@ -1,6 +1,6 @@
-const path = require('path');
-const videoProcessingService = require("./VideoProcessingService");
-const imageProcessingService = require("./ImageProcessingService");
+import path from 'path';
+import videoProcessingService from "./VideoProcessingService.js";
+import imageProcessingService from "./ImageProcessingService.js";
 
 
 const file_Processing_Service = async (files, folder, user) => {
@@ -124,4 +124,4 @@ const file_Processing_Service = async (files, folder, user) => {
   return fileProcessorResponse;
 };
 
-module.exports = file_Processing_Service;
+export default file_Processing_Service;

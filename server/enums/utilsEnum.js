@@ -1,5 +1,3 @@
-const UtilsKeywords = {
-    PAGE_LIMIT: 20,
-  };
-  
-  module.exports = { UtilsKeywords };
+export const UtilsKeywords = {
+  PAGE_LIMIT: 20,
+};

@@ -1,6 +1,4 @@
-const cloudinary = require("cloudinary").v2;
-const fs = require('fs');
-const path = require('path');
+import { v2 as cloudinary } from 'cloudinary';
 
 // Video Upload To Cloud Service
 const cloud_Video_Uploader = async (files, folder = 'eventsZar') => {
@@ -101,4 +99,4 @@ const videoProcessingService = async (files, folder, user = 'temporary') => {
     }
 }
 
-module.exports = videoProcessingService;
+export default videoProcessingService;

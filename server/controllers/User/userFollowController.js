@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
-import Users from "../../models/User/Users";
-import FollowerFollowings from '../../models/FollowerFollowing/Followers&Followings';
+import Users from "../../models/User/Users.js";
+import FollowerFollowings from '../../models/FollowerFollowing/Followers&Followings.js';
 import BlockedUsers from '../../models/User/BlockedUsers.js'
-import CatchAsync from "../../error/catchAsync";
-import ErrorHandler from "../../utils/errorHandler";
-import { HttpStatusCode } from "../../enums/httpHeaders";
-import { UtilsKeywords } from "../../enums/utilsEnum";
-import APIFeatures from "../../utils/apiFeatures";
-import { eventsZarGeneralResponse } from '../../utils/responses'
+import CatchAsync from "../../error/catchAsync.js";
+import ErrorHandler from "../../utils/errorHandler.js";
+import { HttpStatusCode } from "../../enums/httpHeaders.js";
+import { UtilsKeywords } from "../../enums/utilsEnum.js";
+import APIFeatures from "../../utils/apiFeatures.js";
 
 /* 
     Index: 

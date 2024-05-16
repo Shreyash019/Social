@@ -1,10 +1,10 @@
-import Users from "../../models/User/Users";
-import FollowerFollowings from "../../models/FollowerFollowing/Followers&Followings";
-import LocationService from '../../Services/locationService';
-import CatchAsync from "../../error/catchAsync";
-import ErrorHandler from "../../utils/errorHandler";
-import { HttpStatusCode } from "../../enums/httpHeaders";
-import FileProcessor from '../../Services/fileProcessing/fileProcessorService';
+import Users from "../../models/User/Users.js";
+import FollowerFollowings from "../../models/FollowerFollowing/Followers&Followings.js";
+import { get_Coordinates_Details } from '../../Services/locationService.js';
+import CatchAsync from "../../error/catchAsync.js";
+import ErrorHandler from "../../utils/errorHandler.js";
+import { HttpStatusCode } from "../../enums/httpHeaders.js";
+import FileProcessor from '../../Services/fileProcessing/fileProcessorService.js';
 
 /* 
     Index: 
@@ -247,7 +247,7 @@ export const social_Media_User_Account_Location_Update = CatchAsync(async (req, 
   }
 
   // Updating user address
-  const isLoc = await LocationService.get_Coordinates_Details(req.body.latitude, req.body.longitude)
+  const isLoc = await get_Coordinates_Details(req.body.latitude, req.body.longitude)
   if (!isLoc.country) return next(new ErrorHandler(`Something went wrong in location coordinates!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
   if (isLoc.address) req.body.address = isLoc.address;
   if (isLoc.city) req.body.city = isLoc.city;

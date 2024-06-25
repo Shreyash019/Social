@@ -124,11 +124,7 @@ const authToken = {
         }
         // const decoded = jwt.verify(token, process.env.JWT_SECRET)
         let user = await Users.findById(jwtReturnData.decoded.id)
-            .select('username +isAccountVerified +isProfileCompleted +isAccountActive +role +hasBusiness +isBusinessVerified +isBusinessActive userAccount businessAccount currentCountry isChatAllowed isViewPortfolioAllowed isViewEventAllowed isViewPostAllowed')
-            .populate({
-                path: 'userAccount',
-                select: 'country'
-            })
+            .select('username +isAccountVerified +isProfileCompleted +isAccountActive country')
 
         // d) Setting Authenticated User
         if (!user) {
@@ -141,16 +137,8 @@ const authToken = {
                 isAccountVerified: user.isAccountVerified,
                 isProfileCompleted: user.isProfileCompleted,
                 isAccountActive: user.isAccountActive,
-                role: user.role,
-                hasBusiness: user.hasBusiness,
-                isBusinessVerified: user.isBusinessVerified,
-                isBusinessActive: user.isBusinessActive,
-                country: user.userAccount?.country ? user.userAccount.country : user?.currentCountry ? user.currentCountry : 'world',
+                country: user?.country ? user.country : 'world',
                 blockedUsers: blockedUsers,
-                isChatAllowed: user.isChatAllowed,
-                isViewPortfolioAllowed: user.isViewPortfolioAllowed,
-                isViewEventAllowed: user.isViewEventAllowed,
-                isViewPostAllowed: user.isViewPostAllowed
             }
         }
 

@@ -23,32 +23,13 @@ import APIFeatures from "../../utils/apiFeatures.js";
         11) Account enable/disable
 */
 
-async function UserExistenceCheck(data) {
-
-    let result = false;
-    await Users.find({ _id: { $in: data } })
-        .countDocuments()
-        .then(count => {
-            if (count === data.length) {
-                result = true;
-            }
-            else if (count !== data.length) {
-                result = false;
-            }
-        })
-        .catch(err => {
-            result = false;
-        });
-    return result;
-}
-
 // ✅ 01) --- FETCHING ALL USERS ---
 export const social_Media_All_Users_List = CatchAsync(async (req, res, next) => {
     // Fetching user current country
     const userCountry = req.user.country;
 
     // Pagination Query
-    let pageLimit = req.query.pageLimit || UtilsKeywords.PAGE_LIMIT;
+    const pageLimit = parseInt(req.query.pageLimit || UtilsKeywords.PAGE_LIMIT);
 
     // MongoDB Query Filter
     let postsQuery = {
@@ -56,7 +37,7 @@ export const social_Media_All_Users_List = CatchAsync(async (req, res, next) => 
             { _id: { $ne: req.user.id } },
             { _id: { $nin: req.user.blockedUsers } },
             { isAccountVerified: true },
-            { country: userCountry }
+            // { country: userCountry }
         ]
     };
 
@@ -88,7 +69,17 @@ export const social_Media_Account_Follow_UnFollow_A_User = CatchAsync(async (req
 
     // Destructuring User and Receiver ID
     const user_Id = req.user.id;
-    const receiver_Id = req.params.uid;
+    const { canFollow = true, toUser } = req.body
+    const receiver_Id = toUser._id || toUser;
+
+    let Error = false; // Example string value from the client
+
+    const boolValue = canFollow === "true" || canFollow === "false" ? canFollow === "true" :
+        typeof canFollow === 'boolean' ? canFollow : Error = true;
+
+    if (Error) {
+        return next(new ErrorHandler("Bad request!", HttpStatusCode.NOT_ACCEPTABLE));
+    }
 
     // Checking if Receiver Id provided
     if (!receiver_Id || !user_Id) {
@@ -105,12 +96,19 @@ export const social_Media_Account_Follow_UnFollow_A_User = CatchAsync(async (req
         return next(new ErrorHandler(`Server error while processing your request`, HttpStatusCode.INTERNAL_SERVER_ERROR));
     }
     // Fetching If Followed
-    const isFollowed = await FollowerFollowings.findOne({ followedByUser: user_Id, followedToUser: receiver_Id });
-    if (!isFollowed) {
-        await FollowerFollowings.create({ followedByUser: user_Id, followedToUser: receiver_Id });
-        responseObject.msgContent = `You are now following ${followingUser.username}!`;
+    if (boolValue) {
+        const result = await FollowerFollowings.findOneAndUpdate(
+            { followedByUser: user_Id, followedToUser: receiver_Id },
+            { followedByUser: user_Id, followedToUser: receiver_Id },
+            { upsert: true, new: true }
+        );
+        if (result) {
+            responseObject.msgContent = `You are now following ${followingUser.username}!`;
+        } else {
+            responseObject.msgContent = `Failed to follow ${followingUser.username}.`;
+        }
     } else {
-        await FollowerFollowings.findByIdAndDelete({ _id: isFollowed._id });
+        await FollowerFollowings.findOneAndDelete({ followedByUser: user_Id, followedToUser: receiver_Id });
         responseObject.msgContent = `You have un-followed ${followingUser.username}!`
     }
 
@@ -143,15 +141,14 @@ export const social_Media_Account_Followers_Followings_Count = CatchAsync(async 
 // ✅ 04) --- ALL FOLLOWERS LIST ---
 export const social_Media_Account_Fetching_Followers_List = CatchAsync(async (req, res, next) => {
 
+    // Page Limit setup
+    const pageLimit = parseInt(req.query.pageLimit || UtilsKeywords.PAGE_LIMIT);
+
     // Fetching Followers
     const followerCount = await FollowerFollowings.countDocuments({ followedToUser: req.user.id })
-
     if (followerCount === 0) {
         return next(new ErrorHandler(`No followers`, HttpStatusCode.SUCCESS));
     }
-
-    // Page Limit setup
-    const pageLimit = req.query.pageLimit || UtilsKeywords.PAGE_LIMIT;
 
     // Fetching Followings
     const apiFeature = new APIFeatures(FollowerFollowings.find({ followedToUser: req.user.id })
@@ -163,29 +160,41 @@ export const social_Media_Account_Fetching_Followers_List = CatchAsync(async (re
     )
         .pagination(pageLimit)
         .followerFollowingFilter()
-    const userFollowers = await apiFeature.query;
+    const queryData = await apiFeature.query;
+    const ids = await FollowerFollowings.find({
+        followedByUser: req.user.id,
+        followedToUser: { $in: queryData.map(data => data.followedByUser._id) }
+    }).select('followedByUser followedToUser');
 
+    const userFollowers = queryData.map((data) => {
+        const follows = ids.filter(id => id.followedToUser.toString() === data.followedByUser._id.toString())
+        return {
+            id: data.followedByUser._id,
+            firstName: data.followedByUser.firstName || "",
+            lastName: data.followedByUser.firstName || "",
+            profilePicture: data.followedByUser.profilePicture,
+            follows: follows.length > 0
+        };
+    })
     // Sending response
     res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         message: "Your followers!",
         followersCount: followerCount,
-        followers: userFollowers
+        followers: userFollowers,
     })
 });
 
 // ✅ 05) --- ALL FOLLOWINGS LIST ---
 export const social_Media_Account_Fetching_Followings_List = CatchAsync(async (req, res, next) => {
-    // Destructuring User and Receiver ID
+
+    // Page Limit setup
+    const pageLimit = parseInt(req.query.pageLimit || UtilsKeywords.PAGE_LIMIT);
 
     const followingCount = await FollowerFollowings.countDocuments({ followedByUser: req.user.id })
-
     if (followingCount === 0) {
         return next(new ErrorHandler("No followings", HttpStatusCode.SUCCESS));
     }
-
-    // Page Limit setup
-    const pageLimit = req.query.pageLimit || UtilsKeywords.PAGE_LIMIT;
 
     // Fetching Followings
     const apiFeature = new APIFeatures(FollowerFollowings.find({ followedByUser: req.user.id })
@@ -197,24 +206,181 @@ export const social_Media_Account_Fetching_Followings_List = CatchAsync(async (r
     )
         .pagination(pageLimit)
         .followerFollowingFilter()
-    const userFollowings = await apiFeature.query;
+    const queryData = await apiFeature.query;
+    const ids = await FollowerFollowings.find({
+        followedByUser: { $in: queryData.map(data => data.followedToUser._id) },
+        followedToUser: req.user.id
+    }).select('followedByUser followedToUser');
 
-    // Sending response
+    const userFollowings = queryData.map((data) => {
+        const follows = ids.filter(id => id.followedByUser.toString() === data.followedToUser._id.toString())
+        return {
+            id: data.followedToUser._id,
+            firstName: data.followedToUser.firstName || "",
+            lastName: data.followedToUser.firstName || "",
+            profilePicture: data.followedToUser.profilePicture,
+            follows: follows.length > 0
+        };
+    })
+
+    // Sending response 
     res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         message: "Your followings!",
         followingsCount: followingCount,
-        followings: userFollowings
+        followings: userFollowings,
     })
 });
 
-// ✅ 06) --- REMOVE A FOLLOWER (BY USER) ---
+// ✅ 06) --- FETCHING OTHER USER FOLLOWERS ---
+export const social_Media_Fetching_Other_User_Followers = CatchAsync(async (req, res, next) => {
+
+    // Checking If User ID provided or not
+    if (!req.params.uid) {
+        return next(new ErrorHandler(`User data is not provided`, HttpStatusCode.UNPROCESSABLE_ENTITY));
+    }
+    const userID = req.params.uid;
+
+    // Page Limit setup
+    const pageLimit = parseInt(req.query.pageLimit || UtilsKeywords.PAGE_LIMIT);
+
+    // Fetching Followers
+    const followerCount = await FollowerFollowings.countDocuments({ followedToUser: userID })
+    if (followerCount === 0) {
+        return next(new ErrorHandler(`No followers`, HttpStatusCode.SUCCESS));
+    }
+
+    // Fetching Followings
+    const apiFeature = new APIFeatures(FollowerFollowings.find({ followedToUser: userID })
+        .populate({
+            path: 'followedByUser',
+            select: 'username firstName lastName profilePicture'
+        }),
+        req.query
+    )
+        .pagination(pageLimit)
+        .followerFollowingFilter()
+    const queryData = await apiFeature.query;
+    const ids = await FollowerFollowings.find({
+        followedByUser: req.user.id,
+        followedToUser: { $in: queryData.map(data => data.followedByUser._id) }
+    }).select('followedByUser followedToUser');
+
+    const userFollowers = queryData.map((data) => {
+        const follows = ids.filter(id => id.followedToUser.toString() === data.followedByUser._id.toString())
+        return {
+            id: data.followedByUser._id,
+            firstName: data.followedByUser.firstName || "",
+            lastName: data.followedByUser.firstName || "",
+            profilePicture: data.followedByUser.profilePicture,
+            follows: follows.length > 0
+        };
+    })
+    // Sending response
+    res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: "Your followers!",
+        followersCount: followerCount,
+        followers: userFollowers,
+    })
+});
+
+// ✅ 07) --- FETCHING OTHER USER FOLLOWINGS ---
+export const social_Media_Fetching_Other_User_Followings = CatchAsync(async (req, res, next) => {
+
+    // Checking If User ID provided or not
+    if (!req.params.uid) {
+        return next(new ErrorHandler(`User data is not provided`, HttpStatusCode.UNPROCESSABLE_ENTITY));
+    }
+    const userID = req.params.uid;
+    // Verifying provided ID is correct or not
+    if (!mongoose.Types.ObjectId.isValid(userID)) {
+        return next(new ErrorHandler(`You are trying to fetch information using wrong information`, HttpStatusCode.FORBIDDEN));
+    }
+
+    // Page Limit setup
+    const pageLimit = parseInt(req.query.pageLimit || UtilsKeywords.PAGE_LIMIT);
+
+    const followingCount = await FollowerFollowings.countDocuments({ followedByUser: userID })
+    if (followingCount === 0) {
+        return next(new ErrorHandler("No followings", HttpStatusCode.SUCCESS));
+    }
+
+    // Fetching Followings
+    const apiFeature = new APIFeatures(FollowerFollowings.find({ followedByUser: userID })
+        .populate({
+            path: 'followedToUser',
+            select: 'username firstName lastName profilePicture',
+        }),
+        req.query
+    )
+        .pagination(pageLimit)
+        .followerFollowingFilter()
+    const queryData = await apiFeature.query;
+    const ids = await FollowerFollowings.find({
+        followedByUser: { $in: queryData.map(data => data.followedToUser._id) },
+        followedToUser: req.user.id
+    }).select('followedByUser followedToUser');
+
+    const userFollowings = queryData.map((data) => {
+        const follows = ids.filter(id => id.followedByUser.toString() === data.followedToUser._id.toString())
+        return {
+            id: data.followedToUser._id,
+            firstName: data.followedToUser.firstName || "",
+            lastName: data.followedToUser.firstName || "",
+            profilePicture: data.followedToUser.profilePicture,
+            follows: follows.length > 0
+        };
+    })
+
+    // Sending response 
+    res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: "Your followings!",
+        followingsCount: followingCount,
+        followings: userFollowings,
+    })
+});
+
+// ✅ 08) --- FETCHING OTHER USER FOLLOWER AND FOLLOWING COUNT ---
+export const social_Media_Fetching_Other_User_Follower_Following_Count = CatchAsync(async (req, res, next) => {
+
+    //  Getting User ID from params and checking if it exists
+    const userID = req.params.uid;
+    if (!userID) {
+        return next(new ErrorHandler(`Trying to fetch information without providing target user data`, HttpStatusCode.BAD_REQUEST));
+    }
+    if (!mongoose.Types.ObjectId.isValid(userID)) {
+        return next(new ErrorHandler(`You are trying to fetch information using wrong information`, HttpStatusCode.FORBIDDEN));
+    }
+
+    // Fetching User Follower and Following Counts
+    const followerCount = await FollowerFollowings.countDocuments({ followedToUser: userID });
+
+    // Fetching User Follower and Following Counts
+    const followingCount = await FollowerFollowings.countDocuments({ followedByUser: userID });
+
+    // Creating response object
+    let response = {
+        followers: followerCount,
+        followings: followingCount
+    }
+
+    // Returning response
+    res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: 'User all followers and following',
+        followInfo: response
+    });
+})
+
+// ✅ 09) --- REMOVE A FOLLOWER (BY USER) ---
 export const social_Media_User_Account_Remove_Followers_From_A_List = CatchAsync(async (req, res, next) => {
 
     // Remover User
-    try{
+    try {
         await FollowerFollowings.findOneAndDelete({ followedToUser: req.user.id });
-    } catch(error){
+    } catch (error) {
         console.log(error.message)
         return next(new ErrorHandler(error.message, HttpStatusCode.BAD_REQUEST));
     }
@@ -226,7 +392,7 @@ export const social_Media_User_Account_Remove_Followers_From_A_List = CatchAsync
     })
 })
 
-// ✅ 07) --- BLOCK A USER ---
+// ✅ 10) --- BLOCK A USER ---
 export const social_Media_User_Blocks_A_User = CatchAsync(async (req, res, next) => {
 
     // Destructuring user and params
@@ -278,7 +444,7 @@ export const social_Media_User_Blocks_A_User = CatchAsync(async (req, res, next)
     });
 });
 
-// ✅ 08) --- UNBLOCK A USER ---
+// ✅ 11) --- UNBLOCK A USER ---
 export const social_Media_User_Unblocks_A_User = CatchAsync(async (req, res, next) => {
 
     // Destructuring user and params
@@ -324,7 +490,7 @@ export const social_Media_User_Unblocks_A_User = CatchAsync(async (req, res, nex
     });
 });
 
-// ✅ 09) --- ALL BLOCKED USER ---
+// ✅ 12) --- ALL BLOCKED USER ---
 export const social_Media_Account_All_Blocked_User = CatchAsync(async (req, res, next) => {
     // Destructuring user
     const user_Id = req.user.id;
@@ -358,140 +524,3 @@ export const social_Media_Account_All_Blocked_User = CatchAsync(async (req, res,
     });
 }
 );
-
-// Checking If Is Followed
-async function isUserFollowed(user, toUser) {
-
-    try {
-        const isFollowed = await FollowerFollowings.findOne({
-            followedByUser: user,
-            followedToUser: toUser,
-        });
-        return !!isFollowed; // Return true if followed, false otherwise
-    } catch (error) {
-        console.error("Error checking if user is followed:", error);
-        return false; // Default to false if an error occurs
-    }
-}
-
-// ✅ 20) --- FETCHING OTHER USER FOLLOWERS ---
-export const social_Media_Fetching_Other_User_Followers = CatchAsync(async (req, res, next) => {
-
-    // Checking If User ID provided or not
-    if (!req.params.uid) {
-        return next(new ErrorHandler(`User data is not provided`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-    }
-    const userID = req.params.uid;
-
-    // Verifying provided ID is correct or not
-    if (!mongoose.Types.ObjectId.isValid(userID)) {
-        return next(new ErrorHandler(`You are trying to fetch information using wrong information`, HttpStatusCode.FORBIDDEN));
-    }
-
-    // Fetching Followers
-    const followerCount = await FollowerFollowings.countDocuments({ followedToUser: userID })
-
-    if (followerCount === 0) {
-        return next(new ErrorHandler(`No followers`, HttpStatusCode.SUCCESS));
-    }
-
-    // Page Limit setup
-    const pageLimit = req.query.pageLimit || UtilsKeywords.PAGE_LIMIT;
-
-    // Fetching Followings
-    const apiFeature = new APIFeatures(FollowerFollowings.find({ followedToUser: userID })
-        .populate({
-            path: 'followedByUser',
-            select: 'username firstName lastName profilePicture',
-        }),
-        req.query
-    )
-        .pagination(pageLimit)
-        .followerFollowingFilter()
-    const userFollowers = await apiFeature.query;
-
-    // Sending response
-    res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: "Your followers!",
-        followersCount: followerCount,
-        followers: userFollowers
-    })
-});
-
-// ✅ 21) --- FETCHING OTHER USER FOLLOWINGS ---
-export const social_Media_Fetching_Other_User_Followings = CatchAsync(async (req, res, next) => {
-
-    // Checking If User ID provided or not
-    if (!req.params.uid) {
-        return next(new ErrorHandler(`User data is not provided`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-    }
-    const userID = req.params.uid;
-
-    // Verifying provided ID is correct or not
-    if (!mongoose.Types.ObjectId.isValid(userID)) {
-        return next(new ErrorHandler(`You are trying to fetch information using wrong information`, HttpStatusCode.FORBIDDEN));
-    }
-
-    // Fetching following list
-    const followingCount = await FollowerFollowings.countDocuments({ followedByUser: userID })
-
-    if (followingCount === 0) {
-        return next(new ErrorHandler("No followings", HttpStatusCode.SUCCESS));
-    }
-
-    // Page Limit setup
-    const pageLimit = req.query.pageLimit || UtilsKeywords.PAGE_LIMIT;
-
-    // Fetching Followings
-    const apiFeature = new APIFeatures(FollowerFollowings.find({ followedByUser: userID })
-        .populate({
-            path: 'followedToUser',
-            select: 'username firstName lastName profilePicture',
-        }),
-        req.query
-    )
-        .pagination(pageLimit)
-        .followerFollowingFilter()
-    const userFollowings = await apiFeature.query;
-
-    // Sending response
-    res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: "Your followings!",
-        followingsCount: followingCount,
-        followings: userFollowings
-    })
-});
-
-// ✅ 22) --- FETCHING OTHER USER FOLLOWER AND FOLLOWING COUNT ---
-export const social_Media_Fetching_Other_User_Follower_Following_Count = CatchAsync(async (req, res, next) => {
-
-    //  Getting User ID from params and checking if it exists
-    const userID = req.params.uid;
-    if (!userID) {
-        return next(new ErrorHandler(`Trying to fetch information without providing target user data`, HttpStatusCode.BAD_REQUEST));
-    }
-    if (!mongoose.Types.ObjectId.isValid(userID)) {
-        return next(new ErrorHandler(`You are trying to fetch information using wrong information`, HttpStatusCode.FORBIDDEN));
-    }
-
-    // Fetching User Follower and Following Counts
-    const followerCount = await FollowerFollowings.countDocuments({ followedToUser: userID });
-
-    // Fetching User Follower and Following Counts
-    const followingCount = await FollowerFollowings.countDocuments({ followedByUser: userID });
-
-    // Creating response object
-    let response = {
-        followers: followerCount,
-        followings: followingCount
-    }
-
-    // Returning response
-    res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: 'User all followers and following',
-        followInfo: response
-    });
-})

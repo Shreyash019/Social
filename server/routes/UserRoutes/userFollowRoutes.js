@@ -18,7 +18,7 @@ import {
 const router = express.Router();
 
 // 01) Fetch All Users
-router.route("/all-users").post(
+router.route("/all-users").get(
     authToken.isAuthenticated,
     social_Media_All_Users_List
 );
@@ -30,19 +30,19 @@ router.route("/follow-un-follow").post(
 );
 
 // 03) Follower Following Count
-router.route("/follower-following-count").post(
+router.route("/follower-following-count").get(
     authToken.isAuthenticated,
     social_Media_Account_Followers_Followings_Count
 );
 
 // 04) Follower List
-router.route("/followers-list").post(
+router.route("/followers-list").get(
     authToken.isAuthenticated,
     social_Media_Account_Fetching_Followers_List
 );
 
 // 05) Following List
-router.route("/followings-list").post(
+router.route("/followings-list").get(
     authToken.isAuthenticated,
     social_Media_Account_Fetching_Followings_List
 );

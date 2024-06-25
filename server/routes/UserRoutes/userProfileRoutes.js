@@ -4,7 +4,6 @@ import {
     social_Media_User_Account_Information,
     social_Media_User_Profile_Information_Update,
     social_Media_User_Account_Profile_Image_Update,
-    social_Media_User_Account_Address_Update,
     social_Media_User_Account_Location_Update,
     social_Media_User_Account_Information_By_Other_User,
     social_Media_User_Account_Delete,
@@ -14,7 +13,7 @@ import {
 const router = express.Router();
 
 // 01) User Profile Information
-router.route("/information").post(
+router.route("/information").get(
     authToken.isAuthenticated,
     social_Media_User_Account_Information
 );
@@ -26,19 +25,13 @@ router.route("/information-update").post(
 );
 
 // 03) User Profile Image Upload
-router.route("/image-update").post(
+router.route("/image-update").put(
     authToken.isAuthenticated,
     social_Media_User_Account_Profile_Image_Update
 );
 
-// 04) User Address Update
-router.route("/address-update").post(
-    authToken.isAuthenticated,
-    social_Media_User_Account_Address_Update
-);
-
 // 05) User Location Update
-router.route("/location-update").post(
+router.route("/address-update").post(
     authToken.isAuthenticated,
     social_Media_User_Account_Location_Update
 );

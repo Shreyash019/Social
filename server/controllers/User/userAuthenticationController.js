@@ -279,6 +279,7 @@ export const social_Media_Account_Resend_OTP = CatchAsync(async (req, res, next)
   res.status(HttpStatusCode.SUCCESS).json({
     success: true,
     message: "OTP Sent Successfully!",
+    OTP
   });
 });
 

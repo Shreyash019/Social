@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
-import server from './app.js';
+import {appInstance} from './app.js';
 const port = process.env.USERPORT || 5000;
 
 cloudinary.config({
@@ -15,6 +15,6 @@ cloudinary.config({
       console.log(`Database connection successful...`);
     });
   
-  server.listen(port, function () {
+  appInstance.listen(port, function () {
     console.log(`Listening on port ${port}`);
   });

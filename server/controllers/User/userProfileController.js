@@ -1,10 +1,12 @@
 import Users from "../../models/User/Users.js";
 import FollowerFollowings from "../../models/FollowerFollowing/Followers&Followings.js";
-import { get_Coordinates_Details } from '../../Services/locationService.js';
+import { get_Coordinates_Details } from '../../config/locationService.js';
 import CatchAsync from "../../error/catchAsync.js";
 import ErrorHandler from "../../utils/errorHandler.js";
 import { HttpStatusCode } from "../../enums/httpHeaders.js";
 import FileProcessor from '../../Services/fileProcessing/fileProcessorService.js';
+import FileDeletion from '../../Services/fileProcessing/ImageVideoDelete.js';
+import { get, set, del, getWithTimeout, setWithTimeout, deleteWithTimeout} from "../../caching/redisConfiguration.js";
 
 /* 
     Index: 
@@ -16,61 +18,94 @@ import FileProcessor from '../../Services/fileProcessing/fileProcessorService.js
         06) User Profile Information By Other User 
 */
 
-// ✅ 01) --- USER PROFILE INFORMATION ---
+// 01) --- USER PROFILE INFORMATION ---
 export const social_Media_User_Account_Information = CatchAsync(async (req, res, next) => {
-  // Fetching user information
-  const userData = await Users.findById({ _id: req.user.id })
-    .select("+isAccountVerified +isProfileCompleted +role +hasBusiness")
-    .catch((err) => {
-      console.log(err);
-    });
+  try {
+    const cacheKey = `user-profile-${req.user.id}`;
+    const cachedData = await get(cacheKey).catch((error) => console.log(error.toString()));
+    // const cachedData = await getWithTimeout(cacheKey, 500).catch((error) => console.log(error.toString()));
+    if (cachedData) {
+      // Validate and sanitize cached data
+      const userData = JSON.parse(cachedData);
+      if (!userData || typeof userData !== 'object') {
+        throw new Error('Invalid cached data');
+      }
+      // Sending Response
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: `User Profile Information`,
+        user: userData,
+      });
+    } else {
+      // Fetch user with required fields (projection)
+      const userData = await Users.findById({ _id: req.user.id }, {
+        username: 1,
+        email: 1,
+        isAccountVerified: 1,
+        isProfileCompleted: 1,
+        role: 1,
+        hasBusiness: 1,
+        firstName: 1,
+        lastName: 1,
+        gender: 1,
+        dob: 1,
+        bio: 1,
+        address: 1,
+        city: 1,
+        state: 1,
+        country: 1,
+        zipCode: 1,
+        profilePicture: 1,
+        followerCount: 1,
+        followingCount: 1,
+      }).catch(next); // Pass error to middleware
 
-  // Checking if user data
-  if (!userData) {
-    return next(new ErrorHandler(`User not found`, HttpStatusCode.NOT_FOUND));
+      if (!userData) {
+        return next(new ErrorHandler(`User not found`, HttpStatusCode.NOT_FOUND));
+      }
+
+      // Response Object
+      const responseData = {
+        _id: userData._id,
+        username: userData.username,
+        email: userData.email,
+        followers: userData.followerCount || 0,
+        followings: userData.followingCount || 0,
+        profile: {},
+      };
+
+      if (userData.isProfileCompleted) {
+        responseData.profile = {
+          firstName: userData.firstName || undefined,
+          lastName: userData.lastName || undefined,
+          gender: userData.gender || undefined,
+          dob: userData.dateOfBirth || undefined,
+          bio: userData.profileSummary || undefined,
+          address: userData.address || undefined,
+          city: userData.city || undefined,
+          state: userData.state || undefined,
+          country: userData.country || undefined,
+          zipCode: userData.zipCode || undefined,
+          profilePicture: userData.profilePicture || undefined,
+        };
+      }
+
+      // Cache the data for future requests using the imported set function
+      await setWithTimeout(cacheKey, responseData, 3600, 500).catch((error) => console.log(error.toString()));
+      // Sending Response
+      res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: `User Profile Information`,
+        user: responseData,
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    return next(new ErrorHandler('Internal Server Error', HttpStatusCode.INTERNAL_SERVER_ERROR));
   }
-
-  // Fetching follower count
-  const followerCount = await FollowerFollowings.countDocuments({ followedToUser: req.user.id, });
-  const followingCount = await FollowerFollowings.countDocuments({ followedByUser: req.user.id, });
-
-  // Response Object
-  let responseData = {
-    _id: userData._id,
-    username: userData.username,
-    email: userData.email,
-    followers: followerCount,
-    followings: followingCount,
-    profile: undefined,
-  };
-
-  if (userData.isProfileCompleted) {
-    responseData.profile = {
-      firstName: userData.firstName || undefined,
-      lastName: userData.lastName || undefined,
-      gender: userData.gender || undefined,
-      dob: userData.dateOfBirth || undefined,
-      bio: userData.profileSummary || undefined,
-      plotNumber: userData.plotNumber || undefined,
-      address: userData.address || undefined,
-      city: userData.city || undefined,
-      state: userData.state || undefined,
-      country: userData.country || undefined,
-      zipCode: userData.zipCode || undefined,
-      location: userData.location || undefined,
-      profilePicture: userData.profilePicture || undefined,
-    };
-  }
-
-  // Sending Response
-  res.status(HttpStatusCode.SUCCESS).json({
-    success: true,
-    message: `User Profile Information`,
-    user: responseData,
-  })
 });
 
-// ✅ 02) --- USER PROFILE UPDATE ---
+// 02) --- USER PROFILE UPDATE ---
 export const social_Media_User_Profile_Information_Update = CatchAsync(async (req, res, next) => {
 
   // Checking image size if it is provided
@@ -82,18 +117,10 @@ export const social_Media_User_Profile_Information_Update = CatchAsync(async (re
     }
   }
 
-  // Checking for image and video
-  let postAssets = [];
-  if (req.files && req.files.profilePicture) {
-    if (Array.isArray(req.files.profilePicture) && req.files.profilePicture.length > 1) {
-      return next(new Error(`Please upload a single image only!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-    }
-    const processedFileResponse = await FileProcessor(req.files.profilePicture, `eventsZar/customer/${req.user.id}/profile`, req.user.id.toString());
-    if (!processedFileResponse.success) {
-      return next(new ErrorHandler(processedFileResponse.message, HttpStatusCode.BAD_REQUEST));
-    } else {
-      postAssets = processedFileResponse.results;
-    }
+  const userAccount = await Users.findById({ _id: req.user.id }).catch(err => console.log(err));
+
+  if (!userAccount) {
+    return next(new ErrorHandler(`Internal Server error`, HttpStatusCode.INTERNAL_SERVER_ERROR))
   }
 
   // Checking if required fields exists
@@ -121,25 +148,40 @@ export const social_Media_User_Profile_Information_Update = CatchAsync(async (re
 
   // Updating user information
   let userDataToUpdate = {}
-  // updating data
-  let userAddressToUpdate = {}
   if (req.body.firstName) {
-    userAddressToUpdate.firstName = req.body.firstName;
+    userDataToUpdate.firstName = req.body.firstName;
   }
   if (req.body.lastName) {
-    userAddressToUpdate.lastName = req.body.lastName;
+    userDataToUpdate.lastName = req.body.lastName;
   }
   if (req.body.profileSummary) {
-    userAddressToUpdate.profileSummary = req.body.profileSummary;
+    userDataToUpdate.profileSummary = req.body.profileSummary;
   }
   if (req.body.dateOfBirth) {
-    userAddressToUpdate.dateOfBirth = req.body.dateOfBirth;
+    userDataToUpdate.dateOfBirth = req.body.dateOfBirth;
   }
   if (req.body.gender) {
-    userAddressToUpdate.gender = req.body.gender;
+    userDataToUpdate.gender = req.body.gender;
   }
-  if (req.body.profilePicture) {
-    userAddressToUpdate.profilePicture = postAssets[0];
+
+  // Checking for image and video
+  if (req.files && req.files.profilePicture) {
+    if (userAccount.profilePicture && userAccount.profilePicture?.public_id != "221EFRVEF") {
+      let arrayImage = [userAccount.profilePicture]
+      const fileDelete = await FileDeletion(arrayImage);
+      if (!arrayImage.success) {
+        return next(new ErrorHandler(`Internal Server Error`, HttpStatusCode.INTERNAL_SERVER_ERROR));
+      }
+    }
+    if (Array.isArray(req.files.profilePicture) && req.files.profilePicture.length > 1) {
+      return next(new Error(`Please upload a single image only!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
+    }
+    const processedFileResponse = await FileProcessor(req.files.profilePicture, `social_media/user/${req.user.id}/profile`, req.user.id.toString());
+    if (!processedFileResponse.success) {
+      return next(new ErrorHandler(processedFileResponse.message, HttpStatusCode.BAD_REQUEST));
+    } else {
+      userDataToUpdate.profilePicture = processedFileResponse.results[0];
+    }
   }
 
   // Updating user isProfile
@@ -149,7 +191,10 @@ export const social_Media_User_Profile_Information_Update = CatchAsync(async (re
 
   try {
     // Saving user Data
-    await Users.findByIdAndUpdate({ _id: req.user.id }, userDataToUpdate, { new: true })
+    await Users.findByIdAndUpdate({ _id: req.user.id }, userDataToUpdate, { new: true });
+    // Destroying caches
+    const cacheKey = `user-profile-${req.user.id}`
+    await del(cacheKey);
   }
   catch (error) {
     console.log(error)
@@ -163,83 +208,60 @@ export const social_Media_User_Profile_Information_Update = CatchAsync(async (re
   });
 });
 
-// ✅ 03) --- ACCOUNT PROFILE IMAGE UPDATE ---
+
+// 03) --- ACCOUNT PROFILE IMAGE UPDATE ---
+// Helper Function for Document Update (DRY Principle)
+async function updateDocument(userId, profilePicture) {
+  try {
+    const updatedUser = await Users.findByIdAndUpdate({ _id: userId }, { profilePicture }, { new: true });
+    if (!updatedUser) {
+      return { success: false, message: 'User not found or update failed!' };
+    }
+    return { success: true, message: 'Updated' };
+  } catch (error) {
+    throw error; // Rethrow for centralized error handling
+  }
+}
 export const social_Media_User_Account_Profile_Image_Update = CatchAsync(async (req, res, next) => {
-  // Checking image size if it is provided
+  // 1. Image Validation (Early Exit)
   if (!req.files || !req.files.profilePicture) {
     return next(new ErrorHandler(`Please provide an image!`, HttpStatusCode.NOT_ACCEPTABLE));
   }
 
-  // Checking for image and video
-  let postAssets = [];
-  if (req.files && req.files.profilePicture) {
-    if (Array.isArray(req.files.profilePicture) && req.files.profilePicture.length > 1) {
-      return next(new Error(`Please upload a single image only!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-    }
-    const processedFileResponse = await FileProcessor(req.files.profilePicture, `eventsZar/customer/${req.user.id}/profile`, req.user.id.toString());
-    if (!processedFileResponse.success) {
-      return next(new ErrorHandler(processedFileResponse.message, HttpStatusCode.BAD_REQUEST));
-    } else {
-      postAssets = processedFileResponse.results[0];
-    }
-  }
-  try {
-    // Saving user Data
-    await Users.findByIdAndUpdate({ _id: req.user.id }, { profilePicture: postAssets }, { new: true })
-  }
-  catch (error) {
-    console.log(error)
-    return next(new ErrorHandler(`Something went wrong, Please try again or login again!`, HttpStatusCode.INTERNAL_SERVER_ERROR));
+  if (Array.isArray(req.files.profilePicture) && req.files.profilePicture.length > 1) {
+    return next(new ErrorHandler("Please upload single image only!", HttpStatusCode.BAD_REQUEST));
   }
 
-  // Sending Response
+  // 2. File Processing with Asynchronous Execution
+  const [userAccount, processedFileResponse] = await Promise.all([
+    Users.findById({ _id: req.user.id }),
+    FileProcessor(req.files.profilePicture, `social_media/user/${req.user.id}/profile`, req.user.id.toString()),
+  ]);
+
+  // 3. Conditional File Deletion (Optimized)
+  const fileDeletePromise = userAccount?.profilePicture && userAccount.profilePicture.public_id !== "221EFRVEF"
+    ? FileDeletion([userAccount.profilePicture])
+    : Promise.resolve({ success: true }); // No deletion needed, return success
+
+  // 4. Error Handling (Combined from Both Responses)
+  const [fileDeleteResult, updateError] = await Promise.all([fileDeletePromise, updateDocument(req.user.id, processedFileResponse.results[0])]);
+
+  if (!fileDeleteResult.success || !updateError.success) {
+    const errorMessage = !updateError.success ? updateError.message : 'Internal Server Error';
+    return next(new ErrorHandler(errorMessage, HttpStatusCode.INTERNAL_SERVER_ERROR));
+  }
+
+  // 5. Cache Invalidation (Clear and Focused)
+  await del(`user-profile-${req.user.id}`); // Clear specific cache
+
+  // 6. Success Response
   res.status(HttpStatusCode.SUCCESS).json({
     success: true,
     message: `User Profile Updated Successfully!`,
   });
 });
 
-// ✅ 04) --- ADDRESS UPDATE ---
-export const social_Media_User_Account_Address_Update = CatchAsync(async (req, res, next) => {
-
-  // Formatting User Address Data To Update
-  let userAddressToUpdate = {}
-  if (req.body.plotNumber) {
-    userAddressToUpdate.plotNumber = req.body.plotNumber;
-  }
-  if (req.body.address) {
-    userAddressToUpdate.plotNumber = req.body.address;
-  }
-  if (req.body.city) {
-    userAddressToUpdate.city = req.body.city;
-  }
-  if (req.body.state) {
-    userAddressToUpdate.state = req.body.state;
-  }
-  if (req.body.country) {
-    userAddressToUpdate.country = req.body.country;
-  }
-  if (req.body.zipCode) {
-    userAddressToUpdate.zipCode = req.body.zipCode;
-  }
-
-  // Saving User Address
-  try {
-    await Users.findByIdAndUpdate({ _id: req.user.id }, userDataToUpdate, { new: true })
-  }
-  catch (error) {
-    console.log(error)
-    return next(new ErrorHandler(`Something went wrong, Please try again or login again!`, HttpStatusCode.INTERNAL_SERVER_ERROR));
-  }
-
-  // Sending response
-  res.status(HttpStatusCode.SUCCESS).json({
-    success: true,
-    message: `Address has been updated successfully!`,
-  });
-});
-
-// ✅ 05) --- USER LOCATION UPDATE ---
+// 04) --- USER LOCATION UPDATE ---
 export const social_Media_User_Account_Location_Update = CatchAsync(async (req, res, next) => {
   //  Checking if the latitude and longitude is provided or not
   if (!req.body.latitude || !req.body.longitude) {
@@ -247,16 +269,15 @@ export const social_Media_User_Account_Location_Update = CatchAsync(async (req, 
   }
 
   // Updating user address
-  const isLoc = await get_Coordinates_Details(req.body.latitude, req.body.longitude)
+  const isLoc = await get_Coordinates_Details(req.body.latitude, req.body.longitude);
   if (!isLoc.country) return next(new ErrorHandler(`Something went wrong in location coordinates!`, HttpStatusCode.UNPROCESSABLE_ENTITY));
-  if (isLoc.address) req.body.address = isLoc.address;
   if (isLoc.city) req.body.city = isLoc.city;
   req.body.country = isLoc.country;
 
   // Saving details
   // Formatting User Address Data To Update
   let userAddressToUpdate = {
-    location: { type: 'Point', coordinates: [req.body.longitude, req.body.latitude] }
+    location: { type: 'Point', coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)] }
   }
   if (req.body.address) {
     userAddressToUpdate.address = req.body.address;
@@ -270,7 +291,10 @@ export const social_Media_User_Account_Location_Update = CatchAsync(async (req, 
 
   // Saving User Address
   try {
-    await Users.findByIdAndUpdate({ _id: req.user.id }, userDataToUpdate, { new: true })
+    await Users.findByIdAndUpdate({ _id: req.user.id }, userAddressToUpdate, { new: true })
+    // Deleting Caching
+    const cacheKey = `user-profile-${req.user.id}`
+    await del(cacheKey);
   }
   catch (error) {
     console.log(error)
@@ -284,7 +308,7 @@ export const social_Media_User_Account_Location_Update = CatchAsync(async (req, 
   });
 });
 
-// ✅ 06) --- USER PROFILE INFORMATION BY OTHER USER ---
+// 06) --- USER PROFILE INFORMATION BY OTHER USER ---
 export const social_Media_User_Account_Information_By_Other_User = CatchAsync(async (req, res, next) => {
 
   // Fetching User ID
@@ -343,7 +367,7 @@ export const social_Media_User_Account_Information_By_Other_User = CatchAsync(as
   });
 });
 
-// ✅ 07) --- USER ACCOUNT DELETE ---
+// 07) --- USER ACCOUNT DELETE ---
 export const social_Media_User_Account_Delete = CatchAsync(async (req, res, next) => {
 
   // Sending Response
@@ -353,7 +377,7 @@ export const social_Media_User_Account_Delete = CatchAsync(async (req, res, next
   });
 });
 
-// ✅ 08) --- USER ACCOUNT ENABLE/DISABLE ---
+// 08) --- USER ACCOUNT ENABLE/DISABLE ---
 export const social_Media_User_Account_Enable_Disable = CatchAsync(async (req, res, next) => {
 
   // Sending Response

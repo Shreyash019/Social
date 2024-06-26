@@ -5,6 +5,7 @@ import Users from '../models/User/Users.js';
 import catchAsync from '../error/catchAsync.js';
 import { HttpStatusCode } from '../enums/httpHeaders.js';
 import { fetchingBlockedUsersId } from '../Services/FollowBlockIdService/GettingIDsFromFetchedData.js';
+import zlib from 'zlib';
 
 const authToken = {
 
@@ -31,41 +32,7 @@ const authToken = {
         res.cookie('usertoken', token, options);
 
         // Return values
-        return {success: true, userToken: token}
-    },
-
-    // 02.1) <<<<<<<<|| TOKEN SETUP FOR SUPER ADMIN ||>>>>>>>>
-    adminSendToken: function (res, user, actionType) {
-
-        // a) Token Generation
-        const token = this.userSignToken(user._id);
-
-        // b) Cookie validation days setup
-        const options = {
-            expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
-            httpOnly: true,
-        }
-
-        // c) Token setting in header
-        res.cookie('admintoken', token, options);
-
-        if (actionType === 11) {
-            res.status(HttpStatusCode.SUCCESS).json({
-                success: true,
-                message: 'Sign In successful!',
-                token
-            })
-        } else if (actionType === 22) {
-            res.status(HttpStatusCode.SUCCESS).json({
-                success: true,
-                message: 'Sign Up successful!',
-            })
-        } else {
-            res.status(HttpStatusCode.UNAUTHORIZED).json({
-                success: false,
-                message: 'Please login again!'
-            })
-        }
+        return { success: true, userToken: token }
     },
 
     // 03) <<<<<<<<|| AUTHENTICATION CHECK ||>>>>>>>>
@@ -141,74 +108,6 @@ const authToken = {
                 blockedUsers: blockedUsers,
             }
         }
-
-        // e) Calling next function
-        next();
-    }),
-
-    // 03.1) <<<<<<<<|| ADMIN AUTHENTICATION CHECK ||>>>>>>>>
-    isAdminAuthenticated: catchAsync(async function (req, res, next) {
-
-        // a) Fetching token 
-        let token = undefined;
-
-        if (req.cookies.adminToken) {
-            token = req.cookies.adminToken
-        }
-        // else if (req.headers.authorization && req.headers.authorization.startsWith('bearer')) {
-        else if (req.headers.authorization && req.headers.authorization.startsWith('bearer')) {
-            if (req.headers.authorization.split(' ')[1].toString().toLowerCase() !== 'null') {
-                token = req.headers.authorization.split(' ')[1];
-            }
-        }
-
-        // b) Returning if no token
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: `Please login.`
-            })
-        }
-
-        // c) Decoding user using token
-        function verifyToken(token) {
-            return new Promise((resolve, reject) => {
-                jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-                    if (err && err.name === 'JsonWebTokenError' && err.message === 'jwt malformed') {
-                        reject(new Error('Invalid token'));
-                    } else if (err) {
-                        reject(err);
-                    } else {
-                        resolve(decoded);
-                    }
-                });
-            });
-        }
-
-        let jwtReturnData = {
-            decoded: undefined,
-            err: undefined
-        };
-        await verifyToken(token)
-            .then(data => {
-                jwtReturnData.decoded = data
-            })
-            .catch(err => {
-                jwtReturnData.err = err.message
-            });
-
-        if (jwtReturnData.err) {
-            return next(new ErrorHandler(`Unauthorized`, 401))
-        }
-        // const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        let user = await SuperAdmin.findById(jwtReturnData.decoded.id)
-
-        // d) Setting Authenticated User
-        if (!user) {
-            return next(new ErrorHandler(`Please login again`, 401))
-        }
-        req.user = user
-
         // e) Calling next function
         next();
     }),
@@ -251,113 +150,38 @@ const authToken = {
         next();
     },
 
-    // 05) <<<<<<<<|| CUSTOMER PROFILE CHECK||>>>>>>>>
-    isAccountTypeCustomer: catchAsync(async (req, res, next) => {
-        if (req.user.role !== 'customer') {
-            req.user = undefined;
-            return res.status(HttpStatusCode.FORBIDDEN).json({
+
+    payLoadProcessing: catchAsync(async (req, res, next) => {
+        try {
+            if (req.headers['content-encoding'] === 'gzip') {
+                console.log("start")            
+                // Decoding logic is required
+                let compressedData = req.body;
+                zlib.gunzip(compressedData, (err, decompressedData) => {
+                    if (err) {
+                        // Handle error
+                        console.log(err)
+                        return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({
+                            success: false,
+                            message: `Something went wrong!`
+                        })
+                    } else {
+                        // Process the decompressed data as usual (e.g., JSON.parse())
+                        req.body = JSON.parse(decompressedData.toString());
+                        // ... use the data
+                        console.log(req.body)
+                    }
+                });
+            }
+        } catch (error) {
+            console.log("Error", error)
+            return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({
                 success: false,
-                message: `Please switch your account to normal user!`
+                message: `Something went wrong!`
             })
         }
         next()
-    }),
-
-    // 06) <<<<<<<<|| BUSINESS PROFILE CHECK||>>>>>>>>
-    isAccountTypeBusiness: catchAsync(async (req, res, next) => {
-
-        // Object For Error If Detected
-        let isError = {
-            error: false,
-            errStatus: undefined,
-            errMsg: undefined
-        }
-
-        // Error In Account
-        if (!req.user.hasBusiness) {            
-            isError.error = true;
-            isError.errStatus = HttpStatusCode.FORBIDDEN;
-            isError.errMsg = `You don't have business account!`;
-        }
-        if (!req.user.isBusinessVerified && req.user.hasBusiness) {
-            isError.error = true;
-            isError.errStatus = HttpStatusCode.FORBIDDEN;
-            isError.errMsg = `Your business account verification is in processing!`;
-        }
-        if (req.user.isBusinessVerified && !req.user.isBusinessActive && req.user.hasBusiness) {
-            isError.error = true;
-            isError.errStatus = HttpStatusCode.FORBIDDEN;
-            isError.errMsg = `You business account is not active as you don't have any plan currently!`;
-        }
-        
-        if (isError.error) {
-            req.user = undefined;
-            return next(new ErrorHandler(isError.errMsg, isError.errStatus))
-        }
-        next();
-    }),
-
-    // 05) <<<<<<<<|| PROFILE VERIFICATION CHECK||>>>>>>>>
-    isBusinessVerifiedAndSubscribed: catchAsync(async (req, res, next) => {
-
-        // Fetching user
-        const userId = req.user.id;
-        const user = await Users.findById({ _id: userId })
-            .select('businessAccount')
-            .catch((err) => {
-                return res.status(HttpStatusCode.UNAUTHORIZED).json({
-                    success: false,
-                    message: `Please login again!`
-                })
-            })
-
-        // Checking if user data exist in header
-        if (!user || !user?.businessAccount) {
-            return res.status(HttpStatusCode.FORBIDDEN).json({
-                success: false,
-                message: `You don't have business account!`
-            })
-        }
-
-        // Checking if business account exist
-        const businessAccount = await BusinessAccount.findById({ _id: user.businessAccount })
-            .select('+isAccountVerified + isProfileVerified +isBusinessVerified planExpire')
-            .catch((err) => {
-                return res.status(HttpStatusCode.FORBIDDEN).json({
-                    success: false,
-                    message: `You don't have business account!`
-                })
-            })
-
-        switch (businessAccount) {
-            case !businessAccount.isBusinessVerified:
-                return res.status(HttpStatusCode.FORBIDDEN).json({
-                    success: false,
-                    message: `Your business account is under verification!`
-                })
-
-            case !businessAccount.isAccountVerified:
-                return res.status(HttpStatusCode.FORBIDDEN).json({
-                    success: false,
-                    message: `Your business account is not verified!`
-                })
-
-            case !businessAccount.isProfileVerified:
-                return res.status(HttpStatusCode.FORBIDDEN).json({
-                    success: false,
-                    message: `Please set you profile first!`
-                })
-
-            default:
-                if (businessAccount.planExpire < Date.now()) {
-                    return res.status(HttpStatusCode.FORBIDDEN).json({
-                        success: false,
-                        message: `Your business plan has expired!`
-                    })
-                }
-        }
-        next();
-    }),
+    })
 }
 
 export default authToken;

@@ -2,11 +2,10 @@ import mongoose from "mongoose";
 
 const QuestionsSchema = new mongoose.Schema(
     {
-        surveyPost: {
+        postDataContainer: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'SurveyPost',
+            ref: 'PostDataContainer',
             select: false,
-            required: true
         },
         questions: [
             {

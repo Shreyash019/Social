@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import fileUpload from "express-fileupload";
+import compression from 'compression';
 import errorMiddleware from "./error/error.js";
 import { Server as SocketIOServer } from 'socket.io';
 import apiTable from './routes/APITable.js';
@@ -20,6 +21,7 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(cors());
 app.use(morgan("combined"));
+app.use(compression())
 app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } }));
 
 app.use('/api/v1', apiTable)

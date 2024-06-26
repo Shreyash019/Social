@@ -1,33 +1,3 @@
-// function convertStringToDateTime(timeString) {
-//     try {
-//         // Extract hour, minute, and meridian (AM or PM)
-//         const [hour, minute, meridian] = timeString.split(':');
-//         const parsedHour = parseInt(hour, 10);
-//         const parsedMinute = parseInt(minute, 10);
-
-//         if (isNaN(parsedHour) || isNaN(parsedMinute)) {
-//             throw new Error("Invalid time format. Please use HH:MM[AM|PM].");
-//         }
-
-//         // Adjust hour for 12-hour format
-//         let adjustedHour = parsedHour;
-//         if (meridian === 'PM' && adjustedHour !== 12) {
-//             adjustedHour += 12;
-//         } else if (meridian === 'AM' && adjustedHour === 12) {
-//             adjustedHour = 0;
-//         }
-//         let currentTime = new Date();
-//         let currentYear = currentTime.getFullYear();
-//         let currentMonth = currentTime.getMonth();
-//         let currentDate = currentTime.getDate();
-
-//         // Create a JavaScript Date object
-//         return new Date(currentYear, currentMonth, currentDate, adjustedHour, parsedMinute); // Replace with actual date if needed
-//     } catch (error) {
-//         throw error; // Re-throw the error for handling in the calling code
-//     }
-// }
-
 function convertStringToDateTime(providedDate, timeString) {
     try {
         // Extract date components (month, day, year) and time components (hour, minute, meridian)

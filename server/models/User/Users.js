@@ -86,9 +86,6 @@ const UserSchemaModel = new mongoose.Schema(
         dateOfBirth: {
             type: Date
         },
-        plotNumber: {
-            type: String,
-        },
         address: {
             type: String,
         },
@@ -154,6 +151,16 @@ const UserSchemaModel = new mongoose.Schema(
                 type: Boolean,
                 default: false
             },
+        },
+        followerCount: {
+            type: Number,
+            default: 0,
+            select: false
+        },
+        followingCount: {
+            type: Number,
+            default: 0,
+            select: false
         },
         resetPasswordToken: String,
         resetPasswordExpire: Date,

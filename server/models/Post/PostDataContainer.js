@@ -2,30 +2,21 @@ import mongoose from "mongoose";
 
 const PostDataContainerSchema = new mongoose.Schema(
   {
-    postOwner: {
+    author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
       required: true,
     },
-    ownerType: {
-      type: String,
-      default: "consumer",
-      enum: ["consumer"],
-    },
     postType: {
       type: String,
       default: "general",
-      enum: ["general", "event", "survey", "poll"],
+      enum: ["general", "survey", "poll"],
       required: true,
-    },
-    postVisibility: {
-      type: String,
-      enum: ["public", "private"],
-      required: true,
+      select: false
     },
     dateOfPost: {
       type: Date,
-      default: Date.now()
+      default: new Date()
     },
     postAssets: [
       {
@@ -63,50 +54,56 @@ const PostDataContainerSchema = new mongoose.Schema(
       type: String,
       select: false,
     },
-    address: {
-      type: String,
-      select: false
-    },
-    city: {
-      type: String,
-      select: false
-    },
     country: {
       type: String,
       select: false
     },
-    likeAllowed: {
+    isPostPublic: {
+      type: Boolean,
+      default: true,
+    },
+    isPostActive: {
+      type: Boolean,
+      default: true,
+    },
+    allowComment: {
+      type: Boolean,
+      default: true,
+    },
+    likeCountVisible: {
       type: Boolean,
       default: true
     },
-    commentAllowed: {
+    likeCommentVisible: {
       type: Boolean,
       default: true
     },
-    likeCommentHide: {
-      type: Boolean,
-      default: false
-    },
-    userLikes: { count: { type: Number, default: 0 }, recentLikedBy: [String] },
-    commentCount: { type: Number, default: 0 },
-    location: {
-      type: { type: String, enum: ["Point"], default: "Point" },
-      coordinates: {
-        type: [Number], // First element: Longitude, Second element: Latitude
-        index: "2dsphere", // Create a 2dsphere index for geospatial queries
+    userLikes: {
+      type: {
+        count: { type: Number, default: 0 },
+        recentLikedBy: String
       },
+      select: false
+    },
+    commentCount: {
+      type: Number,
+      default: 0,
+      select: false
     },
     viewCounter: {
       type: Number,
       default: 0,
+      select: false
     },
     clickCounter: {
       type: Number,
       default: 0,
+      select: false
     },
     shareCounter: {
       type: Number,
       default: 0,
+      select: false
     },
     reportCount: {
       type: Number,
@@ -137,42 +134,40 @@ const PostDataContainerSchema = new mongoose.Schema(
       ref: 'Questions',
       select: false
     },
-    responses: [
-      {
-        userId: {  // New field to store user ID
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Users', // Reference to your User schema 
-        },
-        questionResponses: [  // Array to hold responses for all questions
-          {
-            questionId: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'Questions', // Reference to your Questions schema
-            },
-            answerIndex: {  // Optional for multiple choice (index of chosen option)
-              type: Number,
-            },
-            answerText: {  // Optional for text answers
-              type: String,
-            },
+    responses: {
+      type: [
+        {
+          userId: {  // New field to store user ID
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Users', // Reference to your User schema 
           },
-          // ... Add more questionResponses objects for other questions
-        ]
-      },
-    ],
+          questionResponses: [  // Array to hold responses for all questions
+            {
+              questionId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Questions', // Reference to your Questions schema
+              },
+              answerIndex: {  // Optional for multiple choice (index of chosen option)
+                type: Number,
+              },
+              answerText: {  // Optional for text answers
+                type: String,
+              },
+            },
+            // ... Add more questionResponses objects for other questions
+          ]
+        },
+      ],
+      select: false
+    },
     moreInformation: {
       type: Array
     },
     sharedWith: {
-      type: [
-          {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "Users"
-          }
-      ],
-      default: [],
-      select: false
-  }
+      type: [String],
+      select: false,
+      default: []
+    }
   },
   { timestamps: true }
 );
